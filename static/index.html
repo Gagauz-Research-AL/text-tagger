@@ -158,9 +158,58 @@ createApp({
       this.displayEl().querySelectorAll(".tag").forEach((n) =>
         n.classList.toggle("selected", +n.dataset.i === this.sel));
     },
+    caretOffset() {
+      const display = this.displayEl();
+      const s = typeof window.getSelection === "function" ? window.getSelection() : null;
+      if (!s || !s.rangeCount) return null;
+      const range = s.getRangeAt(0);
+      const c = range.startContainer;
+      if (!display.contains(c)) return null;
+      if (c === display) {
+        let off = 0;
+        for (let i = 0; i < range.startOffset && i < display.childNodes.length; i++) {
+          off += display.childNodes[i].textContent.length;
+        }
+        return off;
+      }
+      let pos = 0;
+      const walker = document.createTreeWalker(display, NodeFilter.SHOW_TEXT);
+      let node;
+      while ((node = walker.nextNode())) {
+        if (node === c) return pos + range.startOffset;
+        pos += node.textContent.length;
+      }
+      return pos;
+    },
+    spanAtCaret(off) {
+      if (off === null || !this.job) return null;
+      const spans = this.job.underlines;
+      for (let i = 0; i < spans.length; i++) {
+        const u = spans[i];
+        if (off >= u.left_pos && off <= u.right_pos + 1) return i;
+      }
+      return null;
+    },
+    syncSelectionWithCaret() {
+      const idx = this.spanAtCaret(this.caretOffset());
+      if (idx === null) {
+        this.sel = null;
+        this.cand = 0;
+        this.retypeText = "";
+        this.styleSelected();
+      } else if (idx !== this.sel) {
+        this.select(idx);
+      }
+    },
+    onSelectionChange() {
+      if (document.activeElement === this.displayEl()) {
+        this.syncSelectionWithCaret();
+      }
+    },
     onTagClick(ev) {
       const t = ev.target.closest(".tag");
       if (t) this.select(+t.dataset.i);
+      else this.syncSelectionWithCaret();
     },
     onEnter(ev) { ev.target.blur(); },
     select(i) { this.sel = i; this.cand = 0; this.retypeText = ""; this.styleSelected(); },
@@ -171,6 +220,7 @@ createApp({
       const kept = applyDiffToUnderlines(this.job.text, newText, this.job.underlines);
       this.job = { text: newText, underlines: kept };
       this.refreshTags(oldList);
+      this.syncSelectionWithCaret();
     },
     refreshTags(oldList) {
       const map = new Map(this.job.underlines.map((u, j) => [u, j]));
@@ -237,6 +287,7 @@ createApp({
   },
   async mounted() {
     window.__tt = this;
+    document.addEventListener("selectionchange", this.onSelectionChange.bind(this));
     this.job = makeJob(await (await fetch("/api/job")).json());
     this.$nextTick(this.renderDisplay);
   },
