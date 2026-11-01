@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>text-tagger</title>
+<script src="/static/vue.global.prod.js"></script>
+<script src="/static/logic.js"></script>
+<style>
+  :root {
+    --bg: #12151c; --panel: #1b202b; --line: #2c3444;
+    --text: #dfe4ee; --dim: #8b94a7;
+    --accent: #4f8cf7; --ok: #3fb97d; --warn: #e09a3c; --bad: #d9646f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 Georgia, "Times New Roman", serif;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 18px; margin: 0; font-family: system-ui, sans-serif; }
+  button {
+    font: 14px system-ui, sans-serif; cursor: pointer; border-radius: 6px;
+    border: 1px solid var(--line); background: var(--panel); color: var(--text);
+    padding: 6px 14px;
+  }
+  button:hover { border-color: var(--accent); }
+  button:disabled { opacity: .4; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.danger { background: transparent; border-color: var(--bad); color: var(--bad); }
+  button.small { padding: 3px 10px; font-size: 13px; }
+  main { display: flex; gap: 18px; padding: 18px 20px; max-width: 1200px; margin: 0 auto; }
+  #editor { flex: 1.6; }
+  #text-display { font-size: 22px; line-height: 2.1; min-height: 120px; outline: none; }
+  #text-display span.tag {
+    cursor: pointer; border-bottom: 3px solid; padding-bottom: 1px;
+  }
+  .seg-grammatical, .seg-phrasing { border-color: var(--warn); }
+  .seg-spelling { border-color: var(--bad); }
+  .seg-other { border-color: var(--accent); }
+  span.tag.selected {
+    background: var(--accent); color: #fff; border-radius: 3px; border-bottom-color: transparent;
+  }
+  aside {
+    flex: 1; background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 16px; font-family: system-ui, sans-serif;
+    font-size: 14px; min-height: 300px;
+  }
+  aside h2 { margin: 0 0 8px; font-size: 14px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
+  aside .type { color: var(--warn); }
+  .candidates { list-style: none; margin: 10px 0; padding: 0; }
+  .candidates li { padding: 6px 10px; border-radius: 6px; }
+  .candidates li.current { background: var(--accent); color: #fff; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  input[type=text] {
+    flex: 1; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px;
+  }
+  .muted { color: var(--dim); }
+  .hint { margin-top: 16px; color: var(--dim); font-size: 13px; }
+  .toast {
+    margin-left: 16px; color: var(--ok); font-family: system-ui, sans-serif; font-size: 14px;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>text-tagger</h1>
+    <span class="muted">{{ job ? job.underlines.length + " tag(s) left" : "" }}</span>
+    <div>
+      <button class="primary" :disabled="!job" @click="approve">Approve</button>
+      <span v-if="toast" class="toast">{{ toast }}</span>
+    </div>
+  </header>
+  <main>
+    <section id="editor">
+      <div id="text-display" contenteditable="true" spellcheck="false"
+           @input="onTextInput" @click="onTagClick" @keydown.enter.prevent="onEnter"></div>
+    </section>
+    <aside>
+      <h2>Segment</h2>
+      <template v-if="sel !== null && current">
+        <dl>
+          <dt class="muted">text</dt><dd><b>{{ current.text }}</b></dd>
+          <dt class="muted">type</dt><dd class="type">{{ current.type }}</dd>
+        </dl>
+        <template v-if="current.candidates.length">
+          <h2>Candidates</h2>
+          <ul class="candidates">
+            <li v-for="(c, i) in current.candidates" :class="{ current: i === cand }">{{ c }}</li>
+          </ul>
+          <div class="row">
+            <button class="small" @click="cycle(-1)">&#9664; prev</button>
+            <button class="small" @click="cycle(1)">next &#9654;</button>
+            <button class="primary small" @click="applyCandidate">Apply</button>
+          </div>
+        </template>
+        <p v-else class="muted">no candidates for this span — fix it yourself below</p>
+        <h2>Retype / split</h2>
+        <form class="row" @submit.prevent="retype">
+          <input type="text" v-model="retypeText" :placeholder="'.replace: [' + current.text + '] — insert a space to split'">
+          <button class="small" type="submit">Replace</button>
+        </form>
+        <div class="row">
+          <button class="danger small" @click="dropUnderline">Drop (false positive)</button>
+        </div>
+      </template>
+      <p v-else class="muted">click an underlined span to act on it</p>
+      <p class="hint">Approve prints the final text on the server console and ends the session.</p>
+    </aside>
+  </main>
+</div>
+<script>
+const { createApp } = Vue;
+const typePrefix = (t) => t.startsWith("weird spelling") ? "seg-spelling"
+  : (t.startsWith("grammatical") || t.startsWith("phrasing")) ? "seg-grammatical" : "seg-other";
+
+const normalizeText = (el) => {
+  let t;
+  try { t = el.innerText; } catch (e) { t = undefined; }
+  if (typeof t !== "string") t = el.textContent || "";
+  return t.replace(/\r?\n/g, " ").trim();
+};
+
+createApp({
+  data: () => ({
+    job: null, sel: null, cand: 0, retypeText: "", toast: "",
+  }),
+  computed: {
+    current() {
+      const u = this.sel === null ? null : this.job && this.job.underlines[this.sel];
+      if (!u || !this.job) return null;
+      return { text: this.job.text.slice(u.left_pos, u.right_pos), candidates: u.candidates, type: u.type };
+    },
+  },
+  methods: {
+    displayEl() { return document.getElementById("text-display"); },
+    renderDisplay() {
+      const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      let html = "";
+      let pos = 0;
+      this.job.underlines.forEach((u, i) => {
+        if (u.left_pos > pos) html += esc(this.job.text.slice(pos, u.left_pos));
+        const cls = ["tag", "seg-" + typePrefix(u.type)];
+        if (i === this.sel) cls.push("selected");
+        html += '<span class="' + cls.join(" ") + '" data-i="' + i + '">' +
+                esc(this.job.text.slice(u.left_pos, u.right_pos)) + "</span>";
+        pos = u.right_pos;
+      });
+      html += esc(this.job.text.slice(pos));
+      this.displayEl().innerHTML = html;
+    },
+    styleSelected() {
+      this.displayEl().querySelectorAll(".tag").forEach((n) =>
+        n.classList.toggle("selected", +n.dataset.i === this.sel));
+    },
+    onTagClick(ev) {
+      const t = ev.target.closest(".tag");
+      if (t) this.select(+t.dataset.i);
+    },
+    onEnter(ev) { ev.target.blur(); },
+    select(i) { this.sel = i; this.cand = 0; this.retypeText = ""; this.styleSelected(); },
+    onTextInput(ev) {
+      const newText = normalizeText(ev.target);
+      if (!this.job || newText === this.job.text) return;
+      const oldList = this.job.underlines.slice();
+      const kept = applyDiffToUnderlines(this.job.text, newText, this.job.underlines);
+      this.job = { text: newText, underlines: kept };
+      this.refreshTags(oldList);
+    },
+    refreshTags(oldList) {
+      const map = new Map(this.job.underlines.map((u, j) => [u, j]));
+      const nodes = [...this.displayEl().querySelectorAll(".tag")];
+      if (nodes.length !== oldList.length || !nodes.every((n) => oldList[+n.dataset.i])) {
+        this.renderDisplay();
+        return;
+      }
+      nodes.forEach((node) => {
+        const old = oldList[+node.dataset.i];
+        if (map.has(old)) node.dataset.i = map.get(old);
+        else {
+          node.replaceWith(document.createTextNode(node.textContent));
+          if (this.sel !== null && oldList[this.sel] === old) this.sel = null;
+        }
+      });
+      if (this.sel !== null && oldList[this.sel] && map.has(oldList[this.sel])) {
+        this.sel = map.get(oldList[this.sel]);
+      }
+      this.styleSelected();
+    },
+    cycle(step) {
+      const c = this.current && this.current.candidates.length;
+      if (c) this.cand = (this.cand + step) % c;
+    },
+    applyCandidate() {
+      if (this.sel === null) return;
+      const u = this.job.underlines[this.sel];
+      if (u.candidates.length) {
+        replaceSegment(this.job, this.sel, u.candidates[this.cand]);
+        this.sel = null;
+        this.renderDisplay();
+      }
+    },
+    retype() {
+      if (this.sel !== null && this.retypeText.trim()) {
+        replaceSegment(this.job, this.sel, this.retypeText);
+        this.sel = null;
+        this.retypeText = "";
+        this.renderDisplay();
+      }
+    },
+    dropUnderline() {
+      if (this.sel !== null) {
+        drop(this.job, this.sel);
+        this.sel = null;
+        this.renderDisplay();
+      }
+    },
+    async approve() {
+      const finalText = approve(this.job);
+      try {
+        await fetch("/api/result", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: finalText }),
+        });
+        this.toast = "approved";
+        setTimeout(() => (this.toast = ""), 3000);
+      } catch (e) {
+        this.toast = "failed to save: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
+      }
+    },
+  },
+  async mounted() {
+    window.__tt = this;
+    this.job = makeJob(await (await fetch("/api/job")).json());
+    this.$nextTick(this.renderDisplay);
+  },
+}).mount("#app");
+</script>
+</body>
+</html>
