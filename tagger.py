@@ -26,6 +26,7 @@ def load_job(raw):
             "right_pos": right,
             "type": u.get("type", ""),
             "candidates": list(u.get("candidates", [])),
+            "original": text[left:right],
         })
     underlines.sort(key=lambda u: u["left_pos"])
     for a, b in zip(underlines, underlines[1:]):
@@ -33,6 +34,7 @@ def load_job(raw):
             raise ValueError(f"overlapping underlines at [{a['left_pos']}, {a['right_pos']}) "
                              f"and [{b['left_pos']}, {b['right_pos']})")
     return {"text": text, "underlines": underlines}
+
 
 
 def render(job):
@@ -58,21 +60,19 @@ def replace_segment(job, idx, new_text):
 
     Used for cycling a candidate in AND for operator free-typing. Later
     underlines are shifted by the length delta; the underline itself is
-    removed (the tag is resolved for that segment).
+    updated to cover the new text (it is not resolved).
     """
     u = job["underlines"][idx]
     l, r = u["left_pos"], u["right_pos"]
     delta = len(new_text) - (r - l)
     job["text"] = job["text"][:l] + new_text + job["text"][r:]
-    remaining = []
+    u["right_pos"] = l + len(new_text)
     for j, other in enumerate(job["underlines"]):
         if j == idx:
             continue
         if other["left_pos"] >= r:
             other["left_pos"] += delta
             other["right_pos"] += delta
-        remaining.append(other)
-    job["underlines"] = remaining
     return new_text
 
 

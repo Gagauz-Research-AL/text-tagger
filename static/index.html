@@ -85,14 +85,19 @@
       <h2>Segment</h2>
       <template v-if="sel !== null && current">
         <dl>
+          <dt class="muted">original</dt><dd><i>{{ current.original }}</i></dd>
           <dt class="muted">text</dt><dd><b>{{ current.text }}</b></dd>
           <dt class="muted">type</dt><dd class="type">{{ current.type }}</dd>
         </dl>
         <template v-if="current.candidates.length">
           <h2>Candidates</h2>
-          <ul class="candidates">
-            <li v-for="(c, i) in current.candidates" :class="{ current: i === cand }">{{ c }}</li>
-          </ul>
+            <ul class="candidates">
+              <li v-for="(c, i) in current.candidates" 
+                  :class="{ current: i === cand }" 
+                  @click="applySpecificCandidate(i)"
+                  style="cursor: pointer">{{ c }}</li>
+            </ul>
+
           <div class="row">
             <button class="small" @click="cycle(-1)">&#9664; prev</button>
             <button class="small" @click="cycle(1)">next &#9654;</button>
@@ -134,7 +139,12 @@ createApp({
     current() {
       const u = this.sel === null ? null : this.job && this.job.underlines[this.sel];
       if (!u || !this.job) return null;
-      return { text: this.job.text.slice(u.left_pos, u.right_pos), candidates: u.candidates, type: u.type };
+      return { 
+        text: this.job.text.slice(u.left_pos, u.right_pos), 
+        candidates: u.candidates, 
+        type: u.type,
+        original: u.original 
+      };
     },
   },
   methods: {
@@ -251,14 +261,16 @@ createApp({
       const u = this.job.underlines[this.sel];
       if (u.candidates.length) {
         replaceSegment(this.job, this.sel, u.candidates[this.cand]);
-        this.sel = null;
         this.renderDisplay();
       }
+    },
+    applySpecificCandidate(i) {
+      this.cand = i;
+      this.applyCandidate();
     },
     retype() {
       if (this.sel !== null && this.retypeText.trim()) {
         replaceSegment(this.job, this.sel, this.retypeText);
-        this.sel = null;
         this.retypeText = "";
         this.renderDisplay();
       }

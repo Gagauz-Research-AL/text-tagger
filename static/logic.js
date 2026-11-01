@@ -11,6 +11,7 @@ function makeJob(raw) {
       right_pos: right,
       type: u.type || "",
       candidates: u.candidates ? u.candidates.slice() : [],
+      original: text.slice(left, right),
     };
   });
   underlines.sort((a, b) => a.left_pos - b.left_pos);
@@ -33,13 +34,12 @@ function replaceSegment(job, idx, newText) {
   const u = job.underlines[idx];
   const delta = newText.length - (u.right_pos - u.left_pos);
   job.text = job.text.slice(0, u.left_pos) + newText + job.text.slice(u.right_pos);
-  job.underlines = job.underlines.filter((other, j) => {
-    if (j === idx) return false;
-    if (other.left_pos >= u.right_pos) {
+  u.right_pos = u.left_pos + newText.length;
+  job.underlines.forEach((other, j) => {
+    if (j !== idx && other.left_pos >= u.right_pos - delta) {
       other.left_pos += delta;
       other.right_pos += delta;
     }
-    return true;
   });
 }
 
