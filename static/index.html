@@ -7,71 +7,151 @@
 <script src="/static/vue.global.prod.js"></script>
 <script src="/static/logic.js"></script>
 <style>
+
   :root {
-    --bg: #12151c; --panel: #1b202b; --line: #2c3444;
-    --text: #dfe4ee; --dim: #8b94a7;
-    --accent: #4f8cf7; --ok: #3fb97d; --warn: #e09a3c; --bad: #d9646f;
+    --paper-1: #f3f6f9;
+    --paper-2: #e7edf4;
+    --card: #ffffff;
+    --ink: #10141a;
+    --muted: #94a7b8;
+    --line: #dfe7ef;
+    --hover: #f2f6fa;
+    --accent: #2f6bff;
+    --warn: #d69a2d;
+    --bad: #d98080;
+    --ok: #2f9d63;
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --pill: 999px;
   }
   * { box-sizing: border-box; }
   body {
-    margin: 0; background: var(--bg); color: var(--text);
-    font: 16px/1.6 Georgia, "Times New Roman", serif;
+    margin: 0;
+    background:
+      radial-gradient(1200px 700px at 18% -12%, #ffffff 0%, rgba(255,255,255,0) 55%),
+      radial-gradient(900px 600px at 100% 110%, #f6f9fc 0%, rgba(246,249,252,0) 50%),
+      linear-gradient(160deg, var(--paper-1), var(--paper-2));
+    background-attachment: fixed;
+    color: var(--ink);
+    font: 15px/1.6 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    letter-spacing: -0.01em;
   }
   header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 10px 20px; background: var(--panel); border-bottom: 1px solid var(--line);
+    max-width: 1400px; margin: 0 auto; width: 100%;
+    padding: 18px 32px;
   }
-  header h1 { font-size: 18px; margin: 0; font-family: system-ui, sans-serif; }
+  .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
+  .brand-dot { color: var(--muted); font-weight: 500; font-size: 12px; vertical-align: super; margin-left: 2px; }
+  .header-right { display: flex; align-items: center; gap: 20px; }
+  .header-stat { color: var(--muted); font-size: 12px; line-height: 1.1; }
+  .header-stat b {
+    display: inline-block; font-size: 30px; font-weight: 600; color: var(--ink);
+    letter-spacing: -0.02em; margin-right: 7px; vertical-align: middle;
+  }
   button {
-    font: 14px system-ui, sans-serif; cursor: pointer; border-radius: 6px;
-    border: 1px solid var(--line); background: var(--panel); color: var(--text);
-    padding: 6px 14px;
+    font: 500 13px/1 "Inter", system-ui, sans-serif; cursor: pointer;
+    border-radius: var(--pill); background: var(--card); border: 1px solid var(--line);
+    color: var(--ink); padding: 10px 20px; transition: all .15s;
   }
-  button:hover { border-color: var(--accent); }
-  button:disabled { opacity: .4; cursor: not-allowed; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.danger { background: transparent; border-color: var(--bad); color: var(--bad); }
-  button.small { padding: 3px 10px; font-size: 13px; }
-  main { display: flex; gap: 18px; padding: 18px 20px; max-width: 1200px; margin: 0 auto; }
-  #editor { flex: 1.6; }
-  #text-display { font-size: 22px; line-height: 2.1; min-height: 120px; outline: none; }
+  button:hover { border-color: var(--ink); }
+  button:disabled { opacity: .35; cursor: not-allowed; }
+  button.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
+  button.primary:hover { background: #232a33; }
+  button.danger { background: transparent; border-color: var(--line); color: var(--muted); }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); background: rgba(217,128,128,.06); }
+  button.small { padding: 8px 16px; font-size: 12px; }
+  button.circle-btn {
+    width: 38px; height: 38px; padding: 0; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  main {
+    display: grid; grid-template-columns: 1fr 380px; gap: 28px;
+    max-width: 1400px; margin: 0 auto; padding: 6px 32px 32px;
+    height: calc(100vh - 86px);
+  }
+  #editor {
+    background: var(--card); border: 1px solid rgba(16,20,26,.06);
+    border-radius: var(--radius-lg); padding: 56px 64px; overflow-y: auto;
+    box-shadow: 0 24px 48px -12px rgba(15,23,42,.08);
+  }
+  #text-display { font-size: 24px; line-height: 2; outline: none; color: var(--ink); }
   #text-display span.tag {
-    cursor: pointer; border-bottom: 3px solid; padding-bottom: 1px;
+    cursor: pointer; border-bottom: 2px solid; padding-bottom: 2px;
+    border-radius: 2px; transition: all .15s;
   }
+  #text-display span.tag:hover { background: rgba(16,20,26,.04); }
   .seg-grammatical, .seg-phrasing { border-color: var(--warn); }
   .seg-spelling { border-color: var(--bad); }
   .seg-other { border-color: var(--accent); }
   span.tag.selected {
-    background: var(--accent); color: #fff; border-radius: 3px; border-bottom-color: transparent;
+    background: var(--ink); color: #fff; border-bottom-color: transparent;
+    border-radius: 7px; padding: 1px 7px 3px;
   }
   aside {
-    flex: 1; background: var(--panel); border: 1px solid var(--line);
-    border-radius: 10px; padding: 16px; font-family: system-ui, sans-serif;
-    font-size: 14px; min-height: 300px;
+    background: var(--card); border: 1px solid rgba(16,20,26,.06);
+    border-radius: var(--radius-lg); padding: 30px;
+    display: flex; flex-direction: column; gap: 22px; overflow-y: auto;
+    box-shadow: 0 24px 48px -12px rgba(15,23,42,.08);
   }
-  aside h2 { margin: 0 0 8px; font-size: 14px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em; }
-  aside .type { color: var(--warn); }
-  .candidates { list-style: none; margin: 10px 0; padding: 0; }
-  .candidates li { padding: 6px 10px; border-radius: 6px; }
-  .candidates li.current { background: var(--accent); color: #fff; }
-  .row { display: flex; gap: 8px; margin-top: 10px; }
+  aside h2 {
+    margin: 0; font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .16em;
+  }
+  .property-grid { display: grid; gap: 0; }
+  .property-row {
+    display: flex; justify-content: space-between; gap: 16px;
+    padding: 11px 2px; border-top: 1px solid var(--line); font-size: 14px;
+  }
+  .property-row:first-child { border-top: 0; padding-top: 0; }
+  .property-label {
+    flex-shrink: 0; color: var(--muted); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .08em; padding-top: 3px;
+  }
+  .property-value { text-align: right; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .type-badge {
+    display: inline-block; background: var(--hover); border: 1px solid var(--line);
+    border-radius: var(--pill); padding: 3px 10px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+  }
+  .candidates { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .candidates li {
+    background: var(--hover); border: 1px solid transparent; border-radius: var(--radius-md);
+    padding: 12px 16px; cursor: pointer; transition: all .15s; font-size: 14px;
+  }
+  .candidates li:hover { background: #e8eff5; }
+  .candidates li.current { background: var(--ink); color: #fff; }
+  .row { display: flex; gap: 10px; align-items: center; }
   input[type=text] {
-    flex: 1; font: inherit; color: var(--text); background: var(--bg);
-    border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px;
+    width: 100%; font: 500 14px/1.4 "Inter", system-ui, sans-serif;
+    color: var(--ink); background: transparent; border: 0;
+    border-bottom: 1px solid var(--line); padding: 10px 2px; transition: border .15s;
   }
-  .muted { color: var(--dim); }
-  .hint { margin-top: 16px; color: var(--dim); font-size: 13px; }
-  .toast {
-    margin-left: 16px; color: var(--ok); font-family: system-ui, sans-serif; font-size: 14px;
+  input[type=text]:focus { outline: none; border-color: var(--ink); }
+  ::placeholder { color: var(--muted); opacity: 1; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .hint { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; text-align: center; }
+  .toast { font-size: 12px; font-weight: 600; color: var(--ok); }
+  .preview-card {
+    background: var(--hover); border: 1px solid var(--line);
+    border-radius: var(--radius-md); padding: 14px 16px; display: grid; gap: 8px;
   }
+  .preview-row { display: flex; gap: 10px; align-items: baseline; }
+  .preview-label {
+    flex: 0 0 72px; color: var(--muted); font-size: 10px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: .1em;
+  }
+  .preview-text { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
+  .preview-text.original { color: var(--muted); font-style: italic; }
+  .preview-text.proposed { color: var(--ink); font-weight: 600; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <h1>text-tagger</h1>
-    <span class="muted">{{ job ? job.underlines.length + " tag(s) left" : "" }}</span>
-    <div>
+    <div class="brand">text-tagger<span class="brand-dot">&reg;</span></div>
+    <div class="header-right">
+      <span class="header-stat" v-if="job"><b>{{ String(job.underlines.length).padStart(2, "0") }}</b> tags left</span>
       <button class="primary" :disabled="!job" @click="approve">Approve</button>
       <span v-if="toast" class="toast">{{ toast }}</span>
     </div>
@@ -84,24 +164,33 @@
     <aside>
       <h2>Segment</h2>
       <template v-if="sel !== null && current">
-        <dl>
-          <dt class="muted">original</dt><dd><i>{{ current.original }}</i></dd>
-          <dt class="muted">text</dt><dd><b>{{ current.text }}</b></dd>
-          <dt class="muted">type</dt><dd class="type">{{ current.type }}</dd>
-        </dl>
+        <div class="property-grid">
+          <div class="property-row"><span class="property-label">original</span><span class="property-value"><i>{{ current.original }}</i></span></div>
+          <div class="property-row"><span class="property-label">text</span><span class="property-value"><b>{{ current.text }}</b></span></div>
+          <div class="property-row"><span class="property-label">type</span><span class="property-value"><span class="type-badge">{{ current.type }}</span></span></div>
+        </div>
         <template v-if="current.candidates.length">
           <h2>Candidates</h2>
             <ul class="candidates">
               <li v-for="(c, i) in current.candidates" 
-                  :class="{ current: i === cand }" 
-                  @click="applySpecificCandidate(i)"
-                  style="cursor: pointer">{{ c }}</li>
+                :class="{ current: i === cand }" 
+                @click="applySpecificCandidate(i)"
+                style="cursor: pointer">{{ c }}</li>
             </ul>
-
+          <div v-if="cand !== null" class="preview-card">
+            <div class="preview-row">
+              <span class="preview-label">Original:</span>
+              <span class="preview-text original">{{ current.text }}</span>
+            </div>
+            <div class="preview-row">
+              <span class="preview-label">Proposed:</span>
+              <span class="preview-text proposed">{{ current.candidates[cand] }}</span>
+            </div>
+          </div>
           <div class="row">
-            <button class="small" @click="cycle(-1)">&#9664; prev</button>
-            <button class="small" @click="cycle(1)">next &#9654;</button>
-            <button class="primary small" @click="applyCandidate">Apply</button>
+            <button class="circle-btn" @click="cycle(-1)" aria-label="previous">&#8592;</button>
+            <button class="circle-btn" @click="cycle(1)" aria-label="next">&#8594;</button>
+            <button class="primary" @click="applyCandidate">Apply</button>
           </div>
         </template>
         <p v-else class="muted">no candidates for this span — fix it yourself below</p>
