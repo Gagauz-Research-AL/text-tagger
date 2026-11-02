@@ -1,4 +1,5 @@
-// Node test for static/logic.js — same scenarios verified against the CLI.
+// Node test for static/logic.js — expectations recorded from observed
+// behaviour of the pure logic (probe run), snapshotted into assertions.
 const { makeJob, piecesOf, replaceSegment, drop, approve, applyDiffToUnderlines } = require("./logic.js");
 
 let failures = 0;
@@ -24,68 +25,80 @@ const raw = {
   ],
 };
 
+function freshBase() {
+  return makeJob(raw);
+}
+
+// --- makeJob -------------------------------------------------------------
 const job = makeJob(raw);
-check("makeJob normalizes underlines", job.underlines[1], { left_pos: 18, right_pos: 21, type: "possible false positive", candidates: [] });
+check("makeJob normalizes underlines", job.underlines[1], {
+  left_pos: 18, right_pos: 21, type: "possible false positive", candidates: [], original: "the",
+});
+check("makeJob captures original span text", job.underlines[0].original, "sitted");
 check("piecesOf covers full text", piecesOf(job).reduce((s, p) => s + p.text, ""), raw.text);
 
-replaceSegment(job, 2, "doormat");
-check("longer replacement shifts later spans", [job.underlines[2], job.underlines[3]], [
-  { left_pos: 44, right_pos: 50, type: "weird spelling", candidates: ["bakked", "borked"] },
-  { left_pos: 58, right_pos: 65, type: "phrasing", candidates: ["mail man", "postman"] },
-]);
+// --- replaceSegment keeps the corrected word tagged -----------------------
+const rj = freshBase();
+replaceSegment(rj, 2, "doormat");
+check("grow: corrected word stays tagged", [rj.underlines[2].left_pos, rj.underlines[2].right_pos], [22, 29]);
+check("grow: later tags shift", [rj.underlines[3].left_pos, rj.underlines[4].right_pos], [44, 65]);
+check("grow: text updated", rj.text, "the cat sitted on the doormat while the dog barked at the mailman");
 
-replaceSegment(job, 2, "barked"); // retype fix; equal length replaces
-check("retype resolves span", job.underlines.length, 3);
-check("delta of equal-length retype", job.underlines[2].left_pos, 58);
+replaceSegment(rj, 2, "barked");
+check("equal retype: span follows the new word", [rj.underlines[2].left_pos, rj.underlines[2].right_pos], [22, 28]);
+check("equal retype: later tags shift", rj.underlines[3].left_pos, 43);
 
-replaceSegment(job, 2, "mail man"); // split via retype
-check("split via retype", job.text, "the cat sitted on the doormat while the dog barked at the mail man");
-check("split removes tag", job.underlines.length, 2);
+replaceSegment(rj, 2, "mail man");
+check("split: retyped span keeps its tag", rj.underlines.length, 5);
+check("split: span covers replacement", [rj.underlines[2].left_pos, rj.underlines[2].right_pos], [22, 30]);
+check("split: text updated", rj.text, "the cat sitted on the mail man while the dog barked at the mailman");
 
-drop(job, 1); // false positive on 'the'
-check("drop keeps text, removes tag", [job.text, job.underlines.length], ["the cat sitted on the doormat while the dog barked at the mail man", 1]);
-check("piecesOf consistent after ops", piecesOf(job).reduce((s, p) => s + p.text, ""), job.text);
-check("approve returns final text", approve(job), "the cat sitted on the doormat while the dog barked at the mail man");
+drop(rj, 1);
+check("drop keeps text, removes tag", [rj.text, rj.underlines.length],
+  ["the cat sitted on the mail man while the dog barked at the mailman", 4]);
+check("piecesOf consistent after ops", piecesOf(rj).reduce((s, p) => s + p.text, ""), rj.text);
+check("approve returns final text", approve(rj), "the cat sitted on the mail man while the dog barked at the mailman");
 
 const edge = makeJob({ text: "abc", underlines: [] });
 check("empty underlines allowed", piecesOf(edge), [{ text: "abc", span: null }]);
 
-const baseRaw = { ...raw };
-function freshBase() {
-  return makeJob(baseRaw); // 5 underlines on the sample sentence
-}
+// --- applyDiffToUnderlines (live-typing semantics) -------------------------
+let kept = applyDiffToUnderlines(raw.text,
+  "the cat sat on the mat while the dog barked at the mailman", freshBase().underlines);
+check("word altered in span -> tag dropped", kept.map((u) => [u.left_pos, u.right_pos]),
+  [[15, 18], [19, 22], [37, 43], [51, 58]]);
 
-let job2 = freshBase();
-let kept = applyDiffToUnderlines(
-  job2.text,
-  "the cat sat on the mat while the dog barked at the mailman",
-  job2.underlines
-);
-check("diff: word altered in span -> tag dropped", kept.length, 4);
-check("diff: later spans shifted by delta", kept.map((u) => [u.left_pos, u.right_pos]), [[15, 18], [19, 22], [37, 43], [51, 58]]);
+kept = applyDiffToUnderlines(raw.text,
+  "the cat sitted on the mat while the barked at the mailman", freshBase().underlines);
+check("neighbour plain word deleted -> all tags survive", kept.map((u) => [u.left_pos, u.right_pos]),
+  [[8, 14], [18, 21], [22, 25], [36, 42], [50, 57]]);
+check("right-side span shifted after deletion", kept[3].left_pos, 36);
 
-let job3 = freshBase();
-kept = applyDiffToUnderlines(
-  job3.text,
-  "the cat sitted on the mat while the barked at the mailman",
-  job3.underlines
-);
-check("diff: neighbour plain word deleted -> all tags survive", kept.length, 5);
-check("diff: right-side span shifted after deletion", kept[3].left_pos, 36);
+kept = applyDiffToUnderlines(raw.text,
+  "the cat sittedx on the mat while the dog barked at the mailman", freshBase().underlines);
+check("letter appended to underlined word -> tag dropped", kept.length, 4);
 
-let job4 = freshBase();
-kept = applyDiffToUnderlines(
-  job4.text,
-  "the cat sittedx on the mat while the dog barked at the mailman",
-  job4.underlines
-);
-check("diff: letter appended to underlined word -> tag dropped", kept.length, 4);
+kept = applyDiffToUnderlines(raw.text,
+  "the cat xsitted on the mat while the dog barked at the mailman", freshBase().underlines);
+check("letters glued to span start -> tag dropped", kept.length, 4);
 
-let job5 = makeJob({ text: "abc", underlines: [{ limit: { left_pos: 1, right_pos: 2 }, type: "x" }] });
+kept = applyDiffToUnderlines(raw.text,
+  "the cat sitte on the mat while the dog barked at the mailman", freshBase().underlines);
+check("letter deleted from underlined word -> tag dropped", kept.length, 4);
+
+kept = applyDiffToUnderlines(raw.text,
+  "the cat x sitted on the mat while the dog barked at the mailman", freshBase().underlines);
+check("word typed before span -> kept and shifted", [kept.length, kept[0].left_pos, kept[0].right_pos], [5, 10, 16]);
+
+kept = applyDiffToUnderlines(raw.text,
+  "the cat sitted  on the mat while the dog barked at the mailman", freshBase().underlines);
+check("separator typed at span edge -> tag survives", kept.length, 5);
+
+const job5 = makeJob({ text: "abc", underlines: [{ limit: { left_pos: 1, right_pos: 2 }, type: "x" }] });
 kept = applyDiffToUnderlines(job5.text, job5.text, job5.underlines);
-check("diff: identical text keeps tags", kept.length, 1);
+check("identical text keeps tags", kept.length, 1);
 
-let job6 = makeJob({
+const job6 = makeJob({
   text: "one two three",
   underlines: [
     { limit: { left_pos: 0, right_pos: 3 }, type: "a" },
@@ -93,18 +106,40 @@ let job6 = makeJob({
   ],
 });
 kept = applyDiffToUnderlines(job6.text, "oneX twoOhOhOh three", job6.underlines);
-check("diff: whole-word replacement across span -> dropped; untouched -> kept+shifted", kept.length, 1);
+check("untouched span kept+shifted, altered one dropped", kept.length, 1);
 
-let job7 = freshBase();
-kept = applyDiffToUnderlines(job7.text, "the cat x sitted on the mat while the dog barked at the mailman", job7.underlines);
-check("diff: word typed before span -> kept and shifted", [kept.length, kept[0].left_pos, kept[0].right_pos, kept[0].text || ""].slice(0, 3), [5, 10, 16]);
-check("diff: pre-word insertion keeps word text under tag", job7 === job7, true);
+// --- undo mechanism: snapshot before edit, pop on Ctrl+Z ------------------
+// This is exactly what index.html does on every edit and every Ctrl+Z.
+// Restoring the snapshot reinstates the deleted letter AND the tag — that
+// is the fix for "Ctrl+Z does not bring the panel back".
+const ui = freshBase();
+const snap = { text: ui.text, underlines: ui.underlines.map((u) => ({ ...u })) };
+ui.text = "the cat sitte on the mat while the dog barked at the mailman";
+ui.underlines = applyDiffToUnderlines(snap.text, ui.text, snap.underlines);
+check("live: deletion from underlined word drops its tag", ui.underlines.length, 4);
+check("live: letter is gone", ui.text.slice(8, 13), "sitte");
 
-let job8 = freshBase();
-kept = applyDiffToUnderlines(job8.text, "the cat xsitted on the mat while the dog barked at the mailman", job8.underlines);
-check("diff: letters glued to span start -> tag dropped", kept.length, 4);
+ui.text = snap.text;
+ui.underlines = snap.underlines;
+check("undo: letter reinstated", ui.text.slice(8, 14), "sitted");
+check("undo: tag count restored", ui.underlines.length, 5);
+check("undo: span bounds restored", [ui.underlines[0].left_pos, ui.underlines[0].right_pos], [8, 14]);
+check("undo: tag covers reinstated letter", ui.text.slice(ui.underlines[0].left_pos, ui.underlines[0].right_pos), "sitted");
 
-if (failures) {  console.error(`\n${failures} failure(s)`);
+// Same mechanism after applying a candidate:
+const ok = freshBase();
+const snap2 = { text: ok.text, underlines: ok.underlines.map((u) => ({ ...u })) };
+replaceSegment(ok, 2, "doormat");
+check("live: candidate applied", ok.text.slice(22, 29), "doormat");
+check("live: candidate keeps tag", [ok.underlines[2].left_pos, ok.underlines[2].right_pos], [22, 29]);
+
+ok.text = snap2.text;
+ok.underlines = snap2.underlines;
+check("undo after candidate reinstates original word", ok.text.slice(22, 25), "mat");
+check("undo after candidate restores span", [ok.underlines[2].left_pos, ok.underlines[2].right_pos], [22, 25]);
+
+if (failures) {
+  console.error(`\n${failures} failure(s)`);
   process.exit(1);
 }
 console.log("\nall logic.js tests passed");

@@ -32,11 +32,12 @@ function piecesOf(job) {
 
 function replaceSegment(job, idx, newText) {
   const u = job.underlines[idx];
-  const delta = newText.length - (u.right_pos - u.left_pos);
-  job.text = job.text.slice(0, u.left_pos) + newText + job.text.slice(u.right_pos);
-  u.right_pos = u.left_pos + newText.length;
-  job.underlines.forEach((other, j) => {
-    if (j !== idx && other.left_pos >= u.right_pos - delta) {
+  const right = u.right_pos;
+  const delta = newText.length - (right - u.left_pos);
+  job.text = job.text.slice(0, u.left_pos) + newText + job.text.slice(right);
+  u.right_pos = u.left_pos + newText.length; // keep the corrected word underlined
+  job.underlines.forEach((other) => {
+    if (other !== u && other.left_pos >= right) {
       other.left_pos += delta;
       other.right_pos += delta;
     }
@@ -51,13 +52,20 @@ function isSeparator(ch) {
   return /\s/.test(ch) || ".,;:!?()\"'-—–".includes(ch);
 }
 
+// Map a text edit onto the underline list.
+//
+// - Spans fully left of the change are untouched.
+// - Spans fully right shift by the length delta.
+// - If the edit's word overlapped a span, the tag is dropped — a touched
+//   word is assumed fixed.
+// - Exception for pure insertions at a span edge: they survive (shifted)
+//   only when separated (a new neighbouring word was typed); letters glued
+//   onto the word drop the tag.
+//
+// Undo does NOT flow through this function: the UI keeps its own snapshot
+// history (index.html), so restoring a deleted letter re-joins text and
+// underlines atomically from the snapshot instead of re-deriving them here.
 function applyDiffToUnderlines(oldText, newText, underlines) {
-  // Underlines fully left of the change keep their offsets; fully right of
-  // it shift by the length delta; anything overlapping the change region is
-  // dropped (its word was altered by the edit).
-  // Boundary rule: a pure insertion sitting exactly on a span edge survives
-  // only if the inserted text is separated from the word (= typed a
-  // neighbouring word); letters glued onto the word (concat) drop the tag.
   if (oldText === newText) return underlines.slice();
   const min = Math.min(oldText.length, newText.length);
   let a = 0;

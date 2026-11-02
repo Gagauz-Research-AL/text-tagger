@@ -79,7 +79,7 @@
   <main>
     <section id="editor">
       <div id="text-display" contenteditable="true" spellcheck="false"
-           @input="onTextInput" @click="onTagClick" @keydown.enter.prevent="onEnter"></div>
+           @input="onTextInput" @click="onTagClick" @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
     </section>
     <aside>
       <h2>Segment</h2>
@@ -134,6 +134,7 @@ const normalizeText = (el) => {
 createApp({
   data: () => ({
     job: null, sel: null, cand: 0, retypeText: "", toast: "",
+    history: [], future: [],
   }),
   computed: {
     current() {
@@ -216,6 +217,79 @@ createApp({
         this.syncSelectionWithCaret();
       }
     },
+    updateJobFromDOM() {
+      const newText = normalizeText(this.displayEl());
+      if (!this.job || newText === this.job.text) return;
+      this.pushHistory(this.caretOffset());
+      const oldList = this.job.underlines.slice();
+      const kept = applyDiffToUnderlines(this.job.text, newText, this.job.underlines);
+      this.job = { text: newText, underlines: kept };
+      this.refreshTags(oldList);
+      this.syncSelectionWithCaret();
+    },
+    handleKeydown(ev) {
+      const mod = ev.ctrlKey || ev.metaKey;
+      if (!mod) return;
+      const k = ev.key.toLowerCase();
+      if (k === "z") { ev.preventDefault(); if (ev.shiftKey) this.redo(); else this.undo(); }
+      else if (k === "y") { ev.preventDefault(); this.redo(); }
+    },
+    pushHistory(caret) {
+      this.history.push({
+        text: this.job.text,
+        underlines: this.job.underlines.map((u) => ({ ...u })),
+        caret,
+      });
+      if (this.history.length > 200) this.history.shift();
+      this.future = [];
+    },
+    undo() {
+      if (!this.history.length) return;
+      this.future.push({
+        text: this.job.text,
+        underlines: this.job.underlines.map((u) => ({ ...u })),
+        caret: this.caretOffset(),
+      });
+      const s = this.history.pop();
+      this.job = { text: s.text, underlines: s.underlines };
+      this.renderDisplay();
+      this.setCaretOffset(s.caret);
+      this.syncSelectionWithCaret();
+    },
+    redo() {
+      if (!this.future.length) return;
+      this.history.push({
+        text: this.job.text,
+        underlines: this.job.underlines.map((u) => ({ ...u })),
+        caret: this.caretOffset(),
+      });
+      const s = this.future.pop();
+      this.job = { text: s.text, underlines: s.underlines };
+      this.renderDisplay();
+      this.setCaretOffset(s.caret);
+      this.syncSelectionWithCaret();
+    },
+    setCaretOffset(off) {
+      if (off === null || off === undefined) return;
+      const display = this.displayEl();
+      const sel = window.getSelection();
+      if (!sel) return;
+      off = Math.max(0, Math.min(off, normalizeText(display).length));
+      display.focus();
+      const walker = document.createTreeWalker(display, NodeFilter.SHOW_TEXT);
+      let pos = 0, node;
+      while ((node = walker.nextNode())) {
+        if (pos + node.textContent.length >= off) {
+          const r = document.createRange();
+          r.setStart(node, off - pos);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+          return;
+        }
+        pos += node.textContent.length;
+      }
+    },
     onTagClick(ev) {
       const t = ev.target.closest(".tag");
       if (t) this.select(+t.dataset.i);
@@ -224,13 +298,7 @@ createApp({
     onEnter(ev) { ev.target.blur(); },
     select(i) { this.sel = i; this.cand = 0; this.retypeText = ""; this.styleSelected(); },
     onTextInput(ev) {
-      const newText = normalizeText(ev.target);
-      if (!this.job || newText === this.job.text) return;
-      const oldList = this.job.underlines.slice();
-      const kept = applyDiffToUnderlines(this.job.text, newText, this.job.underlines);
-      this.job = { text: newText, underlines: kept };
-      this.refreshTags(oldList);
-      this.syncSelectionWithCaret();
+      this.updateJobFromDOM();
     },
     refreshTags(oldList) {
       const map = new Map(this.job.underlines.map((u, j) => [u, j]));
@@ -260,6 +328,7 @@ createApp({
       if (this.sel === null) return;
       const u = this.job.underlines[this.sel];
       if (u.candidates.length) {
+        this.pushHistory(this.caretOffset());
         replaceSegment(this.job, this.sel, u.candidates[this.cand]);
         this.renderDisplay();
       }
@@ -270,6 +339,7 @@ createApp({
     },
     retype() {
       if (this.sel !== null && this.retypeText.trim()) {
+        this.pushHistory(this.caretOffset());
         replaceSegment(this.job, this.sel, this.retypeText);
         this.retypeText = "";
         this.renderDisplay();
@@ -277,6 +347,7 @@ createApp({
     },
     dropUnderline() {
       if (this.sel !== null) {
+        this.pushHistory(this.caretOffset());
         drop(this.job, this.sel);
         this.sel = null;
         this.renderDisplay();
