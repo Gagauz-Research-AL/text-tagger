@@ -7,211 +7,1133 @@
 <script src="/static/vue.global.prod.js"></script>
 <script src="/static/logic.js"></script>
 <style>
+  @font-face {
+    font-family: "Inter";
+    src: url("/static/fonts/inter.woff2") format("woff2");
+    font-weight: 300 600;
+    font-style: normal;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: "Inter Tight";
+    src: url("/static/fonts/inter-tight.woff2") format("woff2");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+  }
 
   :root {
-    --paper-1: #f3f6f9;
-    --paper-2: #e7edf4;
-    --card: #ffffff;
-    --ink: #10141a;
-    --muted: #94a7b8;
-    --line: #dfe7ef;
-    --hover: #f2f6fa;
-    --accent: #2f6bff;
-    --warn: #d69a2d;
-    --bad: #d98080;
-    --ok: #2f9d63;
-    --radius-lg: 20px;
-    --radius-md: 14px;
+    --page: #ffffff;
+    --panel-a: #cad4df;
+    --panel-b: #c7d1dc;
+    --panel-c: #d9e1e9;
+    --panel-d: #dde5ed;
+    --ink: #212121;
+    --ink-soft: #4d555d;
+    --muted: #8b9299;
+    --faded: #a9bac9;
+    --line: rgba(33, 33, 33, 0.12);
+    --line-strong: rgba(33, 33, 33, 0.2);
+    --white-line: rgba(255, 255, 255, 0.62);
+    --warn: #9b7b4d;
+    --bad: #b17370;
+    --accent: #54779b;
+    --radius-xl: 44px;
+    --radius-lg: 28px;
+    --radius-md: 17px;
     --pill: 999px;
+    --display: "Inter Tight", "Inter", "Helvetica Neue", Arial, sans-serif;
+    --sans: "Inter", "Helvetica Neue", Arial, sans-serif;
   }
+
   * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
   body {
     margin: 0;
+    min-height: 100vh;
     background:
-      radial-gradient(1200px 700px at 18% -12%, #ffffff 0%, rgba(255,255,255,0) 55%),
-      radial-gradient(900px 600px at 100% 110%, #f6f9fc 0%, rgba(246,249,252,0) 50%),
-      linear-gradient(160deg, var(--paper-1), var(--paper-2));
-    background-attachment: fixed;
+      radial-gradient(1200px 780px at 6% 0%, #ffffff 0%, rgba(255, 255, 255, 0) 62%),
+      radial-gradient(1000px 800px at 100% 100%, #f4f7fa 0%, rgba(244, 247, 250, 0) 58%),
+      var(--page);
     color: var(--ink);
-    font: 15px/1.6 "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font: 400 14px/1.55 var(--sans);
     letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
-  header {
-    display: flex; align-items: center; justify-content: space-between;
-    max-width: 1400px; margin: 0 auto; width: 100%;
-    padding: 18px 32px;
+  ::selection { background: var(--ink); color: #ffffff; }
+
+  .panel {
+    position: relative;
+    width: min(1800px, calc(100% - 40px));
+    margin: 20px auto;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    isolation: isolate;
+    background:
+      radial-gradient(58% 44% at 6% -6%, rgba(255, 255, 255, 0.96) 0%, rgba(255, 255, 255, 0) 62%),
+      radial-gradient(40% 36% at 96% 8%, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0) 66%),
+      radial-gradient(70% 46% at 56% 112%, rgba(255, 255, 255, 0.58) 0%, rgba(255, 255, 255, 0) 68%),
+      linear-gradient(150deg, var(--panel-a) 0%, var(--panel-b) 30%, var(--panel-c) 54%, var(--panel-a) 78%, var(--panel-d) 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.82),
+      0 40px 90px -52px rgba(38, 54, 72, 0.38);
   }
-  .brand { font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
-  .brand-dot { color: var(--muted); font-weight: 500; font-size: 12px; vertical-align: super; margin-left: 2px; }
-  .header-right { display: flex; align-items: center; gap: 20px; }
-  .header-stat { color: var(--muted); font-size: 12px; line-height: 1.1; }
-  .header-stat b {
-    display: inline-block; font-size: 30px; font-weight: 600; color: var(--ink);
-    letter-spacing: -0.02em; margin-right: 7px; vertical-align: middle;
+  .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(34% 26% at 31% 38%, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0) 72%),
+      radial-gradient(26% 18% at 74% 66%, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0) 72%);
   }
+  .site { position: relative; z-index: 1; }
+
+  .topbar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    padding: 26px 46px 22px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: max-content;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .brand svg { width: 28px; height: 28px; flex: none; }
+  .brand-words { display: flex; flex-direction: column; line-height: 1; }
+  .brand-words b {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.24em;
+  }
+  .brand-words span {
+    margin-top: 4px;
+    font-size: 7.5px;
+    font-weight: 500;
+    letter-spacing: 0.34em;
+    color: var(--ink-soft);
+  }
+  .brand sup {
+    position: relative;
+    top: -0.7em;
+    margin-left: 2px;
+    font-size: 6.5px;
+    letter-spacing: 0;
+    color: var(--muted);
+  }
+  .nav { display: flex; align-items: center; gap: 34px; }
+  .nav a {
+    position: relative;
+    padding: 6px 0;
+    color: rgba(33, 33, 33, 0.58);
+    font-size: 11px;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .nav a::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: currentColor;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.25s ease;
+  }
+  .nav a:hover, .nav a.active { color: var(--ink); }
+  .nav a:hover::after, .nav a.active::after { transform: scaleX(1); }
+  .top-actions { justify-self: end; display: flex; align-items: center; gap: 20px; }
+  .top-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(33, 33, 33, 0.54);
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .status-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0.7;
+  }
+
   button {
-    font: 500 13px/1 "Inter", system-ui, sans-serif; cursor: pointer;
-    border-radius: var(--pill); background: var(--card); border: 1px solid var(--line);
-    color: var(--ink); padding: 10px 20px; transition: all .15s;
+    font-family: var(--sans);
+    color: var(--ink);
   }
-  button:hover { border-color: var(--ink); }
-  button:disabled { opacity: .35; cursor: not-allowed; }
-  button.primary { background: var(--ink); border-color: var(--ink); color: #fff; }
-  button.primary:hover { background: #232a33; }
-  button.danger { background: transparent; border-color: var(--line); color: var(--muted); }
-  button.danger:hover { border-color: var(--bad); color: var(--bad); background: rgba(217,128,128,.06); }
-  button.small { padding: 8px 16px; font-size: 12px; }
-  button.circle-btn {
-    width: 38px; height: 38px; padding: 0; border-radius: 50%;
-    display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  button:focus-visible, a:focus-visible, input:focus-visible {
+    outline: 1.5px solid var(--ink);
+    outline-offset: 3px;
   }
-  main {
-    display: grid; grid-template-columns: 1fr 380px; gap: 28px;
-    max-width: 1400px; margin: 0 auto; padding: 6px 32px 32px;
-    height: calc(100vh - 86px);
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 12px 19px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--pill);
+    background: transparent;
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   }
-  #editor {
-    background: var(--card); border: 1px solid rgba(16,20,26,.06);
-    border-radius: var(--radius-lg); padding: 56px 64px; overflow-y: auto;
-    box-shadow: 0 24px 48px -12px rgba(15,23,42,.08);
+  .pill:hover { background: rgba(255, 255, 255, 0.42); border-color: var(--ink); }
+  .pill:disabled { opacity: 0.38; cursor: not-allowed; transform: none; box-shadow: none; }
+  .pill-dark {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #ffffff;
+    padding: 12px 21px;
   }
-  #text-display { font-size: 24px; line-height: 2; outline: none; color: var(--ink); }
+  .pill-dark:hover {
+    background: #050505;
+    border-color: #050505;
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px -14px rgba(0, 0, 0, 0.65);
+  }
+  .pill.small { padding: 10px 15px; font-size: 10px; }
+  .arrow { font-size: 13px; line-height: 0.8; }
+
+  .hero { position: relative; padding: 40px 46px 0; }
+  .hero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
+    gap: 20px;
+    align-items: center;
+  }
+  .hero-copy { position: relative; padding-left: 46px; z-index: 2; }
+  .rail {
+    position: absolute;
+    left: 0;
+    top: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 14px;
+    color: rgba(33, 33, 33, 0.38);
+    font-size: 8.5px;
+    letter-spacing: 0.08em;
+  }
+  .rail span.active { color: var(--ink); }
+  .rail i { display: block; width: 1px; height: 24px; background: rgba(33, 33, 33, 0.16); }
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 22px;
+    color: rgba(33, 33, 33, 0.52);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.19em;
+    text-transform: uppercase;
+  }
+  .spark { width: 14px; height: 14px; flex: none; fill: currentColor; }
+  h1 {
+    margin: 0;
+    max-width: 780px;
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: clamp(54px, 6.6vw, 106px);
+    font-weight: 300;
+    line-height: 0.94;
+    letter-spacing: -0.055em;
+  }
+  h1 .strong { font-weight: 500; }
+  h1 .fade { color: var(--faded); }
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 34px;
+    margin-top: 32px;
+    padding-bottom: 6px;
+  }
+  .lede {
+    max-width: 335px;
+    margin: 0;
+    color: rgba(33, 33, 33, 0.6);
+    font-size: 11.5px;
+    line-height: 1.65;
+    letter-spacing: -0.005em;
+  }
+  .cta { position: relative; top: -2px; }
+
+  .hero-visual {
+    position: relative;
+    justify-self: end;
+    width: min(100%, 390px);
+    height: 350px;
+    margin-right: 6px;
+  }
+  .hero-visual > .spark {
+    position: absolute;
+    top: 8px;
+    right: 4px;
+    width: 25px;
+    height: 25px;
+    color: var(--ink);
+    z-index: 4;
+  }
+  .orbit {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .orbit-a {
+    width: 96%;
+    height: 46%;
+    border: 1px solid var(--white-line);
+    transform: translate(-50%, -50%) rotate(-23deg);
+  }
+  .orbit-b {
+    width: 77%;
+    height: 34%;
+    border: 1px solid rgba(33, 33, 33, 0.12);
+    transform: translate(-50%, -50%) rotate(18deg);
+  }
+  .orbit-label {
+    position: absolute;
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    z-index: 3;
+    color: rgba(33, 33, 33, 0.62);
+    font-size: 8px;
+    line-height: 1.4;
+    letter-spacing: 0.005em;
+  }
+  .orbit-label i {
+    display: block;
+    flex: none;
+    width: 7px;
+    height: 7px;
+    margin-top: 1px;
+    border: 1px solid rgba(33, 33, 33, 0.16);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.72);
+  }
+  .label-a { left: 0; top: 65%; }
+  .label-b { right: 0; top: 42%; }
+  .tagi {
+    position: absolute;
+    left: 50%;
+    top: 49%;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    width: min(78%, 300px);
+    height: 162px;
+    padding-left: 17%;
+    border-radius: 46px;
+    transform: translate(-50%, -50%) rotate(-16deg);
+    background:
+      radial-gradient(90% 130% at 20% -22%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 50%),
+      radial-gradient(80% 110% at 78% 118%, rgba(103, 126, 150, 0.32) 0%, rgba(255, 255, 255, 0) 62%),
+      linear-gradient(124deg, #ffffff 0%, #eaf0f6 17%, #b8c9da 35%, #fbfdfe 48%, #d2dde8 58%, #93a9be 74%, #e9f0f6 88%, #ffffff 100%);
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.95),
+      inset 0 -2px 2px rgba(255, 255, 255, 0.55),
+      inset 0 -28px 40px rgba(85, 108, 132, 0.26),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.44),
+      0 2px 3px rgba(72, 92, 112, 0.16),
+      0 48px 72px -32px rgba(31, 50, 70, 0.5);
+  }
+  .tagi::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      linear-gradient(113deg, transparent 0 27%, rgba(255, 255, 255, 0.52) 39%, rgba(255, 255, 255, 0.08) 48%, transparent 56%),
+      linear-gradient(296deg, transparent 52%, rgba(255, 255, 255, 0.32) 68%, transparent 81%);
+    mix-blend-mode: screen;
+    opacity: 0.85;
+    pointer-events: none;
+  }
+  .tagi::after {
+    content: "";
+    position: absolute;
+    left: 17%;
+    right: 16%;
+    bottom: 20%;
+    height: 1px;
+    background: rgba(33, 33, 33, 0.12);
+  }
+  .tagi .hole {
+    position: relative;
+    z-index: 2;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 30%, #adbecf 0%, #d9e2eb 62%, #eef3f8 100%);
+    box-shadow:
+      inset 0 7px 12px rgba(36, 54, 72, 0.38),
+      inset 0 -2px 3px rgba(255, 255, 255, 0.6),
+      0 1px 0 rgba(255, 255, 255, 0.9),
+      0 0 0 1px rgba(112, 134, 156, 0.16);
+  }
+  .tagi .tag-id {
+    position: relative;
+    z-index: 2;
+    color: rgba(33, 33, 33, 0.34);
+    font-size: 7px;
+    font-weight: 500;
+    letter-spacing: 0.28em;
+    white-space: nowrap;
+  }
+
+  .hero-stats {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 30px;
+    margin-top: 4px;
+    padding: 0 0 18px;
+  }
+  .big-stat { display: flex; align-items: flex-end; gap: 16px; }
+  .big-num {
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: clamp(92px, 10.5vw, 178px);
+    font-weight: 400;
+    line-height: 0.73;
+    letter-spacing: -0.075em;
+    font-variant-numeric: tabular-nums;
+  }
+  .big-label {
+    padding-bottom: 5px;
+    color: rgba(33, 33, 33, 0.54);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.45;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .workspace { padding: 8px 22px 22px; }
+  .workspace-label {
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 0 24px 13px;
+    color: rgba(33, 33, 33, 0.45);
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+  .workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 396px;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .editor-card {
+    display: flex;
+    flex-direction: column;
+    height: clamp(520px, 68vh, 760px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.74);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.46));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 32px 70px -44px rgba(35, 52, 70, 0.52);
+    backdrop-filter: blur(22px) saturate(1.08);
+    -webkit-backdrop-filter: blur(22px) saturate(1.08);
+  }
+  .card-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 16px 26px;
+    border-bottom: 1px solid rgba(33, 33, 33, 0.08);
+    color: rgba(33, 33, 33, 0.48);
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .doc-meta { color: rgba(33, 33, 33, 0.68); }
+  .doc-meta .sep { padding: 0 5px; opacity: 0.4; }
+  .doc-extra { color: rgba(33, 33, 33, 0.38); }
+  .editor-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(33, 33, 33, 0.22) transparent; }
+  .editor-scroll::-webkit-scrollbar { width: 6px; }
+  .editor-scroll::-webkit-scrollbar-thumb { background: rgba(33, 33, 33, 0.18); border-radius: 99px; }
+  #text-display {
+    min-height: 100%;
+    padding: 38px 48px 52px;
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: clamp(21px, 1.72vw, 27px);
+    font-weight: 400;
+    line-height: 1.95;
+    letter-spacing: -0.026em;
+    outline: none;
+    caret-color: var(--ink);
+  }
   #text-display span.tag {
-    cursor: pointer; border-bottom: 2px solid; padding-bottom: 2px;
-    border-radius: 2px; transition: all .15s;
+    padding-bottom: 2px;
+    border-bottom: 1.5px solid;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  #text-display span.tag:hover { background: rgba(16,20,26,.04); }
-  .seg-grammatical, .seg-phrasing { border-color: var(--warn); }
+  #text-display span.tag:hover {
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 4px 14px -8px rgba(33, 33, 33, 0.4);
+  }
+  .seg-grammatical { border-color: var(--warn); }
   .seg-spelling { border-color: var(--bad); }
   .seg-other { border-color: var(--accent); }
-  span.tag.selected {
-    background: var(--ink); color: #fff; border-bottom-color: transparent;
-    border-radius: 7px; padding: 1px 7px 3px;
+  #text-display span.tag.selected {
+    padding: 1px 7px 3px;
+    border-bottom-color: transparent;
+    border-radius: 8px;
+    background: var(--ink);
+    color: #ffffff;
+    box-shadow: 0 7px 18px -10px rgba(0, 0, 0, 0.55);
   }
+  .card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 13px 26px;
+    border-top: 1px solid rgba(33, 33, 33, 0.08);
+    color: rgba(33, 33, 33, 0.42);
+    font-size: 9px;
+    letter-spacing: 0.01em;
+  }
+  .keys { display: flex; align-items: center; gap: 4px; white-space: nowrap; color: rgba(33, 33, 33, 0.46); }
+  kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    border: 1px solid rgba(33, 33, 33, 0.16);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.3);
+    color: rgba(33, 33, 33, 0.62);
+    font: 500 8.5px/1 var(--sans);
+  }
+
   aside {
-    background: var(--card); border: 1px solid rgba(16,20,26,.06);
-    border-radius: var(--radius-lg); padding: 30px;
-    display: flex; flex-direction: column; gap: 22px; overflow-y: auto;
-    box-shadow: 0 24px 48px -12px rgba(15,23,42,.08);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    min-height: 0;
+    padding: 22px 24px 24px;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.16));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.7),
+      0 32px 70px -48px rgba(35, 52, 70, 0.46);
+    backdrop-filter: blur(22px) saturate(1.04);
+    -webkit-backdrop-filter: blur(22px) saturate(1.04);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(33, 33, 33, 0.22) transparent;
   }
-  aside h2 {
-    margin: 0; font-size: 11px; font-weight: 600; color: var(--muted);
-    text-transform: uppercase; letter-spacing: .16em;
+  aside::-webkit-scrollbar { width: 5px; }
+  aside::-webkit-scrollbar-thumb { background: rgba(33, 33, 33, 0.16); border-radius: 99px; }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding-bottom: 13px;
+    border-bottom: 1px solid rgba(33, 33, 33, 0.1);
   }
-  .property-grid { display: grid; gap: 0; }
-  .property-row {
-    display: flex; justify-content: space-between; gap: 16px;
-    padding: 11px 2px; border-top: 1px solid var(--line); font-size: 14px;
+  .label, .aside-label {
+    margin: 0;
+    color: rgba(33, 33, 33, 0.5);
+    font-size: 8.5px;
+    font-weight: 600;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
   }
-  .property-row:first-child { border-top: 0; padding-top: 0; }
-  .property-label {
-    flex-shrink: 0; color: var(--muted); font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .08em; padding-top: 3px;
+  .panel-index {
+    color: rgba(33, 33, 33, 0.5);
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
   }
-  .property-value { text-align: right; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
+  .segment-hero { display: grid; gap: 11px; }
   .type-badge {
-    display: inline-block; background: var(--hover); border: 1px solid var(--line);
-    border-radius: var(--pill); padding: 3px 10px; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    width: max-content;
+    max-width: 100%;
+    padding: 5px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: var(--pill);
+    background: rgba(255, 255, 255, 0.26);
+    color: rgba(33, 33, 33, 0.62);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
-  .candidates { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .type-badge i { width: 5px; height: 5px; flex: none; border-radius: 50%; background: var(--ink); }
+  .kind-grammatical i { background: var(--warn); }
+  .kind-spelling i { background: var(--bad); }
+  .kind-other i { background: var(--accent); }
+  .segment-word {
+    margin: 1px 0 0;
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: clamp(32px, 2.75vw, 44px);
+    font-weight: 400;
+    line-height: 1.03;
+    letter-spacing: -0.05em;
+    overflow-wrap: anywhere;
+  }
+  .segment-original {
+    margin: 0;
+    color: var(--muted);
+    font-size: 10px;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
+  }
+  .segment-original span { color: rgba(33, 33, 33, 0.55); text-decoration: line-through; text-decoration-color: rgba(33, 33, 33, 0.25); }
+
+  .aside-block { display: grid; gap: 10px; padding-top: 2px; }
+  .candidates { list-style: none; display: grid; gap: 3px; margin: 0; padding: 0; }
   .candidates li {
-    background: var(--hover); border: 1px solid transparent; border-radius: var(--radius-md);
-    padding: 12px 16px; cursor: pointer; transition: all .15s; font-size: 14px;
+    display: grid;
+    grid-template-columns: 21px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 12px;
+    border-radius: 11px;
+    color: var(--ink);
+    font-size: 13.5px;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease;
+    overflow-wrap: anywhere;
   }
-  .candidates li:hover { background: #e8eff5; }
-  .candidates li.current { background: var(--ink); color: #fff; }
-  .row { display: flex; gap: 10px; align-items: center; }
-  input[type=text] {
-    width: 100%; font: 500 14px/1.4 "Inter", system-ui, sans-serif;
-    color: var(--ink); background: transparent; border: 0;
-    border-bottom: 1px solid var(--line); padding: 10px 2px; transition: border .15s;
-  }
-  input[type=text]:focus { outline: none; border-color: var(--ink); }
-  ::placeholder { color: var(--muted); opacity: 1; }
-  .muted { color: var(--muted); font-size: 13px; }
-  .hint { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; text-align: center; }
-  .toast { font-size: 12px; font-weight: 600; color: var(--ok); }
+  .candidates li:hover { background: rgba(255, 255, 255, 0.44); }
+  .candidates li.current { background: var(--ink); color: #ffffff; }
+  .cand-index { color: var(--muted); font-size: 8.5px; letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
+  .candidates li.current .cand-index { color: rgba(255, 255, 255, 0.52); }
+  .cand-arrow { justify-self: end; color: currentColor; font-size: 12px; opacity: 0; transform: translate(-2px, 2px); transition: opacity 0.18s ease, transform 0.18s ease; }
+  .candidates li:hover .cand-arrow, .candidates li.current .cand-arrow { opacity: 0.8; transform: translate(0, 0); }
+
   .preview-card {
-    background: var(--hover); border: 1px solid var(--line);
-    border-radius: var(--radius-md); padding: 14px 16px; display: grid; gap: 8px;
+    display: grid;
+    gap: 9px;
+    padding: 13px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.28);
   }
-  .preview-row { display: flex; gap: 10px; align-items: baseline; }
+  .preview-row { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 10px; align-items: baseline; }
   .preview-label {
-    flex: 0 0 72px; color: var(--muted); font-size: 10px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: .1em;
+    color: rgba(33, 33, 33, 0.45);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
   }
-  .preview-text { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: 15px; }
-  .preview-text.original { color: var(--muted); font-style: italic; }
-  .preview-text.proposed { color: var(--ink); font-weight: 600; }
+  .preview-text { color: var(--ink); font-size: 12.5px; line-height: 1.45; overflow-wrap: anywhere; }
+  .preview-text.original { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(33, 33, 33, 0.24); }
+  .preview-text.proposed { font-weight: 500; }
+
+  .controls { display: flex; align-items: center; gap: 7px; }
+  .circle-btn {
+    display: inline-grid;
+    place-items: center;
+    width: 37px;
+    height: 37px;
+    padding: 0;
+    border: 1px solid rgba(33, 33, 33, 0.19);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+  }
+  .circle-btn:hover { border-color: var(--ink); background: rgba(255, 255, 255, 0.5); transform: translateY(-1px); }
+  .apply-btn { margin-left: auto; padding: 12px 20px; }
+
+  .form-row { display: flex; align-items: center; gap: 8px; }
+  input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    padding: 9px 1px;
+    border: 0;
+    border-bottom: 1px solid rgba(33, 33, 33, 0.2);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 400 12.5px/1.4 var(--sans);
+    letter-spacing: -0.01em;
+    transition: border-color 0.2s ease;
+  }
+  input[type="text"]:focus { border-color: var(--ink); outline: none; }
+  ::placeholder { color: rgba(33, 33, 33, 0.4); opacity: 1; }
+  .drop-btn {
+    width: max-content;
+    padding: 0 0 2px;
+    border: 0;
+    border-bottom: 1px solid rgba(33, 33, 33, 0.22);
+    border-radius: 0;
+    background: transparent;
+    color: rgba(33, 33, 33, 0.54);
+    font-size: 10px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+  }
+  .drop-btn:hover { color: var(--bad); border-color: var(--bad); }
+
+  .empty-state { display: grid; gap: 16px; padding: 10px 0 4px; }
+  .empty-state p { margin: 0; }
+  .empty-state > p:first-child {
+    color: var(--faded);
+    font-family: var(--display);
+    font-size: clamp(34px, 2.8vw, 44px);
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+  .empty-state > p:first-child b { display: block; color: var(--ink); font-weight: 400; }
+  .muted { color: var(--muted); font-size: 11px; line-height: 1.6; }
+  .muted.small { font-size: 10.5px; }
+  .empty-state .pill { justify-self: start; margin-top: 2px; }
+  .hint {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid rgba(33, 33, 33, 0.1);
+    color: rgba(33, 33, 33, 0.42);
+    font-size: 9px;
+    line-height: 1.55;
+  }
+  .hint::before {
+    content: "";
+    flex: none;
+    width: 5px;
+    height: 5px;
+    margin-top: 4px;
+    border-radius: 50%;
+    background: var(--ink);
+    opacity: 0.42;
+  }
+
+  .footer-panel {
+    padding: 44px 46px 22px;
+    background:
+      radial-gradient(52% 46% at 92% -8%, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0) 66%),
+      radial-gradient(46% 40% at 4% 108%, rgba(255, 255, 255, 0.34) 0%, rgba(255, 255, 255, 0) 66%),
+      linear-gradient(158deg, #d2dbe5 0%, var(--panel-a) 44%, #c5d0dc 100%);
+  }
+  .footer-panel .site, .footer-panel > * { position: relative; z-index: 1; }
+  .foot-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(180px, 0.75fr) minmax(180px, 0.75fr);
+    gap: 44px;
+    align-items: start;
+    padding-bottom: 38px;
+  }
+  .foot-title {
+    margin: 15px 0 0;
+    max-width: 480px;
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: clamp(38px, 4.5vw, 72px);
+    font-weight: 300;
+    line-height: 0.98;
+    letter-spacing: -0.05em;
+  }
+  .foot-title .fade { color: var(--faded); }
+  .foot-note { max-width: 265px; margin: 15px 0 0; color: rgba(33, 33, 33, 0.56); font-size: 10.5px; line-height: 1.6; }
+  .foot-block { display: grid; gap: 0; }
+  .foot-block-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; min-height: 37px; }
+  .foot-list { display: grid; gap: 0; list-style: none; margin: 13px 0 0; padding: 0; }
+  .foot-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(33, 33, 33, 0.11);
+    color: rgba(33, 33, 33, 0.58);
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .foot-list li span:last-child { color: var(--ink); text-align: right; }
+  .foot-list .keys { color: var(--ink); }
+  .wordmark {
+    margin-top: 10px;
+    color: var(--ink);
+    font-family: var(--display);
+    font-size: clamp(118px, 25vw, 460px);
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.075em;
+    text-align: center;
+    white-space: nowrap;
+    user-select: none;
+  }
+  .foot-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-top: 8px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(33, 33, 33, 0.12);
+    color: rgba(33, 33, 33, 0.45);
+    font-size: 8px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .foot-bottom .spark { width: 15px; height: 15px; color: var(--ink); }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 18px;
+    border-radius: var(--pill);
+    background: var(--ink);
+    color: #ffffff;
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    box-shadow: 0 20px 44px -20px rgba(0, 0, 0, 0.55);
+    transform: translateX(-50%);
+  }
+  .toast::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #ffffff; opacity: 0.75; }
+
+  @media (max-width: 1200px) {
+    .hero-inner { grid-template-columns: 1fr; }
+    .hero-visual { display: none; }
+    .workspace-grid { grid-template-columns: 1fr; }
+    .editor-card { height: clamp(480px, 62vh, 680px); }
+    aside { height: auto; max-height: none; overflow: visible; }
+    .foot-top { grid-template-columns: 1fr 1fr; gap: 34px; }
+    .foot-top > div:first-child { grid-column: 1 / -1; }
+    .foot-title { max-width: 620px; }
+    .foot-note { max-width: 430px; }
+  }
+
+  @media (max-width: 900px) {
+    .nav { display: none; }
+    .topbar { grid-template-columns: 1fr auto; padding: 22px 30px; }
+    .hero { padding: 30px 30px 0; }
+    .hero-copy { padding-left: 36px; }
+    .workspace { padding: 6px 14px 14px; }
+    .workspace-label { padding: 0 16px 11px; }
+    .footer-panel { padding: 34px 30px 18px; }
+    .wordmark { font-size: clamp(100px, 27vw, 280px); }
+  }
+
+  @media (max-width: 680px) {
+    body { font-size: 13px; }
+    .panel { width: calc(100% - 16px); margin: 8px auto; border-radius: 28px; }
+    .topbar { padding: 17px 18px; gap: 12px; }
+    .brand { gap: 9px; }
+    .brand svg { width: 23px; height: 23px; }
+    .brand-words b { font-size: 10px; }
+    .brand-words span { font-size: 6.5px; }
+    .top-meta { display: none; }
+    .top-actions { gap: 8px; }
+    .pill { padding: 10px 14px; font-size: 10px; }
+    .pill-dark { padding: 10px 15px; }
+    .hero { padding: 26px 18px 0; }
+    .hero-copy { padding-left: 0; }
+    .rail { display: none; }
+    .eyebrow { margin-bottom: 15px; font-size: 8px; }
+    h1 { font-size: clamp(44px, 13vw, 66px); }
+    .hero-actions { gap: 18px; margin-top: 22px; }
+    .lede { max-width: 100%; font-size: 11px; }
+    .hero-stats { margin-top: 16px; gap: 16px; padding-bottom: 12px; }
+    .big-num { font-size: clamp(72px, 21vw, 108px); }
+    .big-stat { gap: 10px; }
+    .big-label { padding-bottom: 3px; font-size: 7.5px; letter-spacing: 0.08em; }
+    .workspace { padding: 2px 8px 8px; }
+    .workspace-label { padding: 0 10px 9px; font-size: 7.5px; }
+    .workspace-grid { gap: 9px; }
+    .editor-card { height: auto; min-height: 430px; border-radius: 22px; }
+    .editor-scroll { overflow: visible; }
+    .card-topline { padding: 12px 17px; font-size: 7.5px; gap: 10px; }
+    .doc-extra { display: none; }
+    #text-display { min-height: 320px; padding: 24px 19px 34px; font-size: 19px; line-height: 1.9; }
+    .card-foot { padding: 11px 17px; font-size: 8px; flex-wrap: wrap; gap: 6px; }
+    .card-foot .keys { display: none; }
+    aside { padding: 18px; border-radius: 22px; }
+    .segment-word { font-size: 32px; }
+    .candidates li { font-size: 13px; }
+    .aside-block .pill { padding: 9px 13px; }
+    .footer-panel { padding: 27px 18px 16px; }
+    .foot-top { grid-template-columns: 1fr; gap: 26px; padding-bottom: 24px; }
+    .foot-top > div:first-child { grid-column: auto; }
+    .foot-title { font-size: clamp(36px, 10.5vw, 50px); }
+    .foot-note { max-width: 100%; }
+    .foot-list { margin-top: 8px; }
+    .foot-block-head { min-height: auto; }
+    .wordmark { font-size: clamp(82px, 27.5vw, 150px); margin-top: 22px; }
+    .foot-bottom { flex-wrap: wrap; gap: 8px 16px; font-size: 7px; }
+    .foot-bottom .spark { display: none; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  }
 </style>
 </head>
 <body>
 <div id="app">
-  <header>
-    <div class="brand">text-tagger<span class="brand-dot">&reg;</span></div>
-    <div class="header-right">
-      <span class="header-stat" v-if="job"><b>{{ String(job.underlines.length).padStart(2, "0") }}</b> tags left</span>
-      <button class="primary" :disabled="!job" @click="approve">Approve</button>
-      <span v-if="toast" class="toast">{{ toast }}</span>
+  <div class="panel app-panel">
+    <div class="site">
+      <header class="topbar">
+        <a class="brand" href="#overview" aria-label="text-tagger overview">
+          <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15.7 3.2h9.1v9.1L12.7 24.4a1.9 1.9 0 0 1-2.7 0l-6.4-6.4a1.9 1.9 0 0 1 0-2.7L15.7 3.2Z"/>
+            <circle cx="20.2" cy="7.8" r="1.6"/>
+          </svg>
+          <span class="brand-words"><b>TEXT</b><span>TAGGER</span></span>
+        </a>
+        <nav class="nav" aria-label="Sections">
+          <a href="#overview" class="active">Overview</a>
+          <a href="#editor">Editor</a>
+          <a href="#segments">Segments</a>
+          <a href="#guide">Guide</a>
+        </nav>
+        <div class="top-actions">
+          <span class="top-meta" v-if="job"><i class="status-dot"></i>{{ pad(tagsLeft) }} tags left</span>
+          <button class="pill pill-dark" :disabled="!job" @click="approve">
+            <span>{{ job ? "Approve" : "Loading" }}</span>
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8 8 2M3 2h5v5"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero" id="overview">
+          <div class="hero-inner">
+            <div class="hero-copy">
+              <div class="rail" aria-hidden="true">
+                <span class="active">01</span><i></i><span>02</span><i></i><span>03</span>
+              </div>
+              <p class="eyebrow">
+                <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+                Text refinement studio
+              </p>
+              <h1><span class="strong">Every</span> word,<br><span class="fade">carefully</span><br><span class="strong">considered.</span></h1>
+              <div class="hero-actions">
+                <p class="lede">Review each underlined segment, compare suggestions, or retype it yourself. Nothing leaves this session until you approve it.</p>
+                <button class="pill pill-dark cta" :disabled="!job" @click="startReview">Start review <span class="arrow">&rarr;</span></button>
+              </div>
+            </div>
+
+            <div class="hero-visual" aria-hidden="true">
+              <svg class="spark" viewBox="0 0 24 24"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+              <span class="orbit orbit-a"></span>
+              <span class="orbit orbit-b"></span>
+              <span class="orbit-label label-a"><i></i>Human review<br>in the loop</span>
+              <span class="orbit-label label-b"><i></i>Live suggestions<br>on every tag</span>
+              <div class="tagi">
+                <span class="hole"></span>
+                <span class="tag-id">TXT / 001</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-stats">
+            <div class="big-stat">
+              <span class="big-num">{{ pad(tagsLeft) }}</span>
+              <span class="big-label">Tags left<br>in this draft</span>
+            </div>
+            <div class="big-stat">
+              <span class="big-num">{{ pad(typeCount) }}</span>
+              <span class="big-label">Tag types<br>under review</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace" id="editor">
+          <div class="workspace-label"><span>Workspace</span><span>Human review / v1.0</span></div>
+          <div class="workspace-grid">
+            <section class="editor-card" aria-label="Draft text">
+              <div class="card-topline">
+                <span>01 &mdash; Draft</span>
+                <span class="doc-meta">{{ pad(wordCount) }} words <span class="sep">&middot;</span> {{ pad(tagsLeft) }} tags</span>
+                <span class="doc-extra">Click a tag to inspect</span>
+              </div>
+              <div class="editor-scroll">
+                <div id="text-display" contenteditable="true" spellcheck="false"
+                     @input="onTextInput" @click="onTagClick" @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
+              </div>
+              <div class="card-foot">
+                <span>Edit the draft directly &mdash; touching a word clears its tag.</span>
+                <span class="keys"><kbd>&#8984;</kbd><kbd>Z</kbd> undo <kbd>&#8984;</kbd><kbd>Y</kbd> redo</span>
+              </div>
+            </section>
+
+            <aside id="segments" aria-label="Segment details">
+              <div class="panel-head">
+                <span class="label">02 &mdash; Segment</span>
+                <span class="panel-index" v-if="sel !== null">{{ pad(sel + 1) }} / {{ pad(tagsLeft) }}</span>
+                <span class="panel-index" v-else>None</span>
+              </div>
+
+              <template v-if="sel !== null && current">
+                <div class="segment-hero">
+                  <span class="type-badge" :class="'kind-' + kindOf(current.type)"><i></i>{{ current.type }}</span>
+                  <p class="segment-word">{{ current.text }}</p>
+                  <p class="segment-original" v-if="current.original !== current.text">was <span>{{ current.original }}</span></p>
+                  <p class="segment-original">{{ current.candidates.length ? current.candidates.length + " suggested replacements" : "No suggested replacements" }}</p>
+                </div>
+
+                <div class="aside-block" v-if="current.candidates.length">
+                  <h2 class="aside-label">Candidates</h2>
+                  <ul class="candidates">
+                    <li v-for="(c, i) in current.candidates" :key="i"
+                        :class="{ current: i === cand }"
+                        @click="applySpecificCandidate(i)">
+                      <span class="cand-index">{{ pad(i + 1) }}</span>
+                      <span>{{ c }}</span>
+                      <span class="cand-arrow">&#8599;</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div v-if="cand !== null && current.candidates.length" class="preview-card">
+                  <div class="preview-row">
+                    <span class="preview-label">Original</span>
+                    <span class="preview-text original">{{ current.text }}</span>
+                  </div>
+                  <div class="preview-row">
+                    <span class="preview-label">Proposed</span>
+                    <span class="preview-text proposed">{{ current.candidates[cand] }}</span>
+                  </div>
+                </div>
+
+                <div class="controls" v-if="current.candidates.length">
+                  <button class="circle-btn" @click="cycle(-1)" aria-label="Previous candidate">&larr;</button>
+                  <button class="circle-btn" @click="cycle(1)" aria-label="Next candidate">&rarr;</button>
+                  <button class="pill pill-dark apply-btn" @click="applyCandidate">Apply <span class="arrow">&rarr;</span></button>
+                </div>
+                <p v-else class="muted small">No candidates for this span &mdash; fix it by hand below.</p>
+
+                <div class="aside-block">
+                  <h2 class="aside-label">Retype or split</h2>
+                  <form class="form-row" @submit.prevent="retype">
+                    <input type="text" v-model="retypeText" :placeholder="'Replace \u201c' + current.text + '\u201d \u2014 add a space to split'">
+                    <button class="pill small" type="submit">Replace</button>
+                  </form>
+                </div>
+
+                <div class="aside-block">
+                  <button class="drop-btn" @click="dropUnderline">&#8627; Drop false positive</button>
+                </div>
+              </template>
+
+              <div v-else class="empty-state">
+                <p>Nothing<b>selected.</b></p>
+                <p class="muted">Choose an underlined span in the draft to inspect it, compare candidates, or retype the phrase.</p>
+                <button class="pill pill-dark" :disabled="!job" @click="startReview">Select first tag <span class="arrow">&rarr;</span></button>
+              </div>
+
+              <p class="hint">Approve prints the final text on the server console and ends the session.</p>
+            </aside>
+          </div>
+        </section>
+      </main>
     </div>
-  </header>
-  <main>
-    <section id="editor">
-      <div id="text-display" contenteditable="true" spellcheck="false"
-           @input="onTextInput" @click="onTagClick" @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
-    </section>
-    <aside>
-      <h2>Segment</h2>
-      <template v-if="sel !== null && current">
-        <div class="property-grid">
-          <div class="property-row"><span class="property-label">original</span><span class="property-value"><i>{{ current.original }}</i></span></div>
-          <div class="property-row"><span class="property-label">text</span><span class="property-value"><b>{{ current.text }}</b></span></div>
-          <div class="property-row"><span class="property-label">type</span><span class="property-value"><span class="type-badge">{{ current.type }}</span></span></div>
+  </div>
+
+  <footer class="panel footer-panel" id="guide">
+    <div class="foot-top">
+      <div>
+        <span class="label">03 &mdash; Guide</span>
+        <h2 class="foot-title">A quieter way<br>to <span class="fade">finish.</span></h2>
+        <p class="foot-note">No auto-approve, no hidden edits. Every change is yours until you sign off.</p>
+      </div>
+      <div class="foot-block">
+        <div class="foot-block-head">
+          <span class="label">Keys</span>
+          <a href="#overview" class="circle-btn" aria-label="Back to top">&uarr;</a>
         </div>
-        <template v-if="current.candidates.length">
-          <h2>Candidates</h2>
-            <ul class="candidates">
-              <li v-for="(c, i) in current.candidates" 
-                :class="{ current: i === cand }" 
-                @click="applySpecificCandidate(i)"
-                style="cursor: pointer">{{ c }}</li>
-            </ul>
-          <div v-if="cand !== null" class="preview-card">
-            <div class="preview-row">
-              <span class="preview-label">Original:</span>
-              <span class="preview-text original">{{ current.text }}</span>
-            </div>
-            <div class="preview-row">
-              <span class="preview-label">Proposed:</span>
-              <span class="preview-text proposed">{{ current.candidates[cand] }}</span>
-            </div>
-          </div>
-          <div class="row">
-            <button class="circle-btn" @click="cycle(-1)" aria-label="previous">&#8592;</button>
-            <button class="circle-btn" @click="cycle(1)" aria-label="next">&#8594;</button>
-            <button class="primary" @click="applyCandidate">Apply</button>
-          </div>
-        </template>
-        <p v-else class="muted">no candidates for this span — fix it yourself below</p>
-        <h2>Retype / split</h2>
-        <form class="row" @submit.prevent="retype">
-          <input type="text" v-model="retypeText" :placeholder="'.replace: [' + current.text + '] — insert a space to split'">
-          <button class="small" type="submit">Replace</button>
-        </form>
-        <div class="row">
-          <button class="danger small" @click="dropUnderline">Drop (false positive)</button>
+        <ul class="foot-list">
+          <li><span>Undo</span><span class="keys"><kbd>&#8984;</kbd><kbd>Z</kbd></span></li>
+          <li><span>Redo</span><span class="keys"><kbd>&#8984;</kbd><kbd>Y</kbd></span></li>
+          <li><span>Step out</span><span><kbd>Enter</kbd></span></li>
+        </ul>
+      </div>
+      <div class="foot-block">
+        <div class="foot-block-head">
+          <span class="label">Session</span>
+          <span class="panel-index">Local</span>
         </div>
-      </template>
-      <p v-else class="muted">click an underlined span to act on it</p>
-      <p class="hint">Approve prints the final text on the server console and ends the session.</p>
-    </aside>
-  </main>
+        <ul class="foot-list">
+          <li><span>Tags left</span><span>{{ pad(tagsLeft) }}</span></li>
+          <li><span>Types</span><span>{{ pad(typeCount) }}</span></li>
+          <li><span>Mode</span><span>Manual review</span></li>
+        </ul>
+      </div>
+    </div>
+    <div class="wordmark" aria-hidden="true">TAGGER</div>
+    <div class="foot-bottom">
+      <span>&copy; 2026 text-tagger</span>
+      <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+      <span>Human review, always</span>
+    </div>
+  </footer>
+
+  <div v-if="toast" class="toast">{{ toast }}</div>
 </div>
 <script>
 const { createApp } = Vue;
-const typePrefix = (t) => t.startsWith("weird spelling") ? "seg-spelling"
-  : (t.startsWith("grammatical") || t.startsWith("phrasing")) ? "seg-grammatical" : "seg-other";
+const typePrefix = (t) => t.startsWith("weird spelling") ? "spelling"
+  : (t.startsWith("grammatical") || t.startsWith("phrasing")) ? "grammatical" : "other";
 
 const normalizeText = (el) => {
   let t;
@@ -229,15 +1151,29 @@ createApp({
     current() {
       const u = this.sel === null ? null : this.job && this.job.underlines[this.sel];
       if (!u || !this.job) return null;
-      return { 
-        text: this.job.text.slice(u.left_pos, u.right_pos), 
-        candidates: u.candidates, 
+      return {
+        text: this.job.text.slice(u.left_pos, u.right_pos),
+        candidates: u.candidates,
         type: u.type,
-        original: u.original 
+        original: u.original
       };
+    },
+    tagsLeft() {
+      return this.job ? this.job.underlines.length : 0;
+    },
+    typeCount() {
+      if (!this.job) return 0;
+      return new Set(this.job.underlines.map((u) => u.type).filter(Boolean)).size;
+    },
+    wordCount() {
+      if (!this.job) return 0;
+      const t = this.job.text.trim();
+      return t ? t.split(/\s+/).length : 0;
     },
   },
   methods: {
+    pad(n) { return String(Number(n) || 0).padStart(2, "0"); },
+    kindOf(t) { return typePrefix(t); },
     displayEl() { return document.getElementById("text-display"); },
     renderDisplay() {
       const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -441,6 +1377,13 @@ createApp({
         this.sel = null;
         this.renderDisplay();
       }
+    },
+    startReview() {
+      if (!this.job) return;
+      if (this.job.underlines.length && this.sel === null) this.select(0);
+      this.displayEl().focus();
+      const editor = document.getElementById("editor");
+      if (editor) editor.scrollIntoView({ behavior: "smooth", block: "start" });
     },
     async approve() {
       const finalText = approve(this.job);
