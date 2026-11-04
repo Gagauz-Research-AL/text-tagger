@@ -214,18 +214,22 @@
   .pill.small { padding: 10px 15px; font-size: 10px; }
   .arrow { font-size: 13px; line-height: 0.8; }
 
-  .hero { position: relative; padding: 40px 46px 0; }
-  .hero-inner {
-    display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
-    gap: 20px;
-    align-items: center;
+  .hero { position: relative; padding: 34px 46px 0; }
+  .hero-inner { position: relative; }
+  .hero-copy {
+    position: relative;
+    z-index: 2;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding-top: 12px;
+    text-align: center;
   }
-  .hero-copy { position: relative; padding-left: 46px; z-index: 2; }
   .rail {
     position: absolute;
     left: 0;
-    top: 14px;
+    top: 50%;
+    z-index: 1;
+    transform: translateY(-50%);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -240,6 +244,7 @@
   .eyebrow {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 9px;
     margin: 0 0 22px;
     color: rgba(33, 33, 33, 0.52);
@@ -249,8 +254,18 @@
     text-transform: uppercase;
   }
   .spark { width: 14px; height: 14px; flex: none; fill: currentColor; }
+  .hero-stage {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    column-gap: clamp(16px, 2vw, 28px);
+    align-items: center;
+  }
   h1 {
-    margin: 0;
+    position: relative;
+    z-index: 2;
+    grid-column: 2;
+    margin: 0 auto;
     max-width: 780px;
     color: var(--ink);
     font-family: var(--display);
@@ -263,28 +278,32 @@
   h1 .fade { color: var(--faded); }
   .hero-actions {
     display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    gap: 34px;
-    margin-top: 32px;
-    padding-bottom: 6px;
+    flex-direction: column;
+    align-items: center;
+    gap: 17px;
+    margin-top: 24px;
   }
   .lede {
-    max-width: 335px;
+    max-width: 430px;
     margin: 0;
     color: rgba(33, 33, 33, 0.6);
     font-size: 11.5px;
     line-height: 1.65;
     letter-spacing: -0.005em;
   }
-  .cta { position: relative; top: -2px; }
+  .cta { position: relative; top: -1px; }
 
   .hero-visual {
-    position: relative;
-    justify-self: end;
-    width: min(100%, 390px);
-    height: 350px;
-    margin-right: 6px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: min(40%, 440px);
+    height: 340px;
+    margin: 0;
+    z-index: 0;
+    opacity: 0.45;
+    pointer-events: none;
   }
   .hero-visual > .spark {
     position: absolute;
@@ -314,29 +333,6 @@
     border: 1px solid rgba(33, 33, 33, 0.12);
     transform: translate(-50%, -50%) rotate(18deg);
   }
-  .orbit-label {
-    position: absolute;
-    display: flex;
-    align-items: flex-start;
-    gap: 7px;
-    z-index: 3;
-    color: rgba(33, 33, 33, 0.62);
-    font-size: 8px;
-    line-height: 1.4;
-    letter-spacing: 0.005em;
-  }
-  .orbit-label i {
-    display: block;
-    flex: none;
-    width: 7px;
-    height: 7px;
-    margin-top: 1px;
-    border: 1px solid rgba(33, 33, 33, 0.16);
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.72);
-  }
-  .label-a { left: 0; top: 65%; }
-  .label-b { right: 0; top: 42%; }
   .tagi {
     position: absolute;
     left: 50%;
@@ -407,30 +403,40 @@
     white-space: nowrap;
   }
 
-  .hero-stats {
+  .hero-stat {
+    position: relative;
+    z-index: 2;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    gap: 30px;
-    margin-top: 4px;
-    padding: 0 0 18px;
+    flex-direction: column;
+    gap: 6px;
   }
-  .big-stat { display: flex; align-items: flex-end; gap: 16px; }
+  .hero-stat-left {
+    grid-column: 1;
+    justify-self: end;
+    align-items: flex-end;
+    text-align: right;
+  }
+  .hero-stat-right {
+    grid-column: 3;
+    justify-self: start;
+    align-items: flex-start;
+    text-align: left;
+  }
   .big-num {
     color: var(--ink);
     font-family: var(--display);
-    font-size: clamp(92px, 10.5vw, 178px);
+    font-size: clamp(40px, 4.4vw, 62px);
     font-weight: 400;
-    line-height: 0.73;
-    letter-spacing: -0.075em;
+    line-height: 0.82;
+    letter-spacing: -0.06em;
     font-variant-numeric: tabular-nums;
   }
   .big-label {
-    padding-bottom: 5px;
+    max-width: 150px;
     color: rgba(33, 33, 33, 0.54);
     font-size: 9px;
     font-weight: 500;
-    line-height: 1.45;
+    line-height: 1.4;
     letter-spacing: 0.12em;
     text-transform: uppercase;
   }
@@ -838,8 +844,12 @@
   .toast::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: #ffffff; opacity: 0.75; }
 
   @media (max-width: 1200px) {
-    .hero-inner { grid-template-columns: 1fr; }
-    .hero-visual { display: none; }
+    .hero-copy { max-width: 980px; }
+    .hero-visual {
+      width: min(40%, 440px);
+      height: 300px;
+      opacity: 0.34;
+    }
     .workspace-grid { grid-template-columns: 1fr; }
     .editor-card { height: clamp(480px, 62vh, 680px); }
     aside { height: auto; max-height: none; overflow: visible; }
@@ -852,7 +862,26 @@
     .nav { display: none; }
     .topbar { grid-template-columns: 1fr auto; padding: 22px 30px; }
     .hero { padding: 30px 30px 0; }
-    .hero-copy { padding-left: 36px; }
+    .hero-visual { top: 38%; width: min(54%, 380px); height: 280px; opacity: 0.26; }
+    .hero-stage { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; }
+    .hero-stage h1 { order: 1; flex: 0 0 100%; max-width: none; }
+    .hero-stat {
+      order: 2;
+      flex-direction: row;
+      align-items: baseline;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .hero-stat-left {
+      justify-self: auto;
+      align-items: baseline;
+      text-align: left;
+      margin-right: 16px;
+      padding-right: 16px;
+      border-right: 1px solid rgba(33, 33, 33, 0.16);
+    }
+    .hero-stat-right { justify-self: auto; align-items: baseline; text-align: left; }
+    .hero-stat .big-label { max-width: none; white-space: nowrap; }
     .workspace { padding: 6px 14px 14px; }
     .workspace-label { padding: 0 16px 11px; }
     .footer-panel { padding: 32px 30px 18px; }
@@ -871,16 +900,16 @@
     .pill { padding: 10px 14px; font-size: 10px; }
     .pill-dark { padding: 10px 15px; }
     .hero { padding: 26px 18px 0; }
-    .hero-copy { padding-left: 0; }
     .rail { display: none; }
+    .hero-visual { display: none; }
     .eyebrow { margin-bottom: 15px; font-size: 8px; }
     h1 { font-size: clamp(44px, 13vw, 66px); }
     .hero-actions { gap: 18px; margin-top: 22px; }
     .lede { max-width: 100%; font-size: 11px; }
-    .hero-stats { margin-top: 16px; gap: 16px; padding-bottom: 12px; }
-    .big-num { font-size: clamp(72px, 21vw, 108px); }
-    .big-stat { gap: 10px; }
-    .big-label { padding-bottom: 3px; font-size: 7.5px; letter-spacing: 0.08em; }
+    .hero-stat { margin-top: 16px; gap: 6px; }
+    .hero-stat-left { margin-right: 12px; padding-right: 12px; }
+    .big-num { font-size: clamp(32px, 8.4vw, 42px); }
+    .big-label { font-size: 7.5px; letter-spacing: 0.09em; }
     .workspace { padding: 2px 8px 8px; }
     .workspace-label { padding: 0 10px 9px; font-size: 7.5px; }
     .workspace-grid { gap: 9px; }
@@ -903,6 +932,13 @@
     .foot-block-head { min-height: auto; }
     .foot-bottom { flex-wrap: wrap; gap: 8px 16px; font-size: 7px; }
     .foot-bottom .spark { display: none; }
+  }
+
+  @media (max-width: 360px) {
+    .big-num { font-size: 27px; }
+    .big-label { font-size: 6.6px; letter-spacing: 0.06em; }
+    .hero-stat { gap: 5px; }
+    .hero-stat-left { margin-right: 9px; padding-right: 9px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -940,43 +976,39 @@
 
       <main>
         <section class="hero" id="overview">
+          <div class="rail" aria-hidden="true">
+            <span class="active">01</span><i></i><span>02</span><i></i><span>03</span>
+          </div>
           <div class="hero-inner">
             <div class="hero-copy">
-              <div class="rail" aria-hidden="true">
-                <span class="active">01</span><i></i><span>02</span><i></i><span>03</span>
-              </div>
               <p class="eyebrow">
                 <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
                 Text refinement studio
               </p>
-              <h1><span class="strong">Every</span> word,<br><span class="fade">carefully</span><br><span class="strong">considered.</span></h1>
+              <div class="hero-stage">
+                <div class="hero-visual" aria-hidden="true">
+                  <svg class="spark" viewBox="0 0 24 24"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+                  <span class="orbit orbit-a"></span>
+                  <span class="orbit orbit-b"></span>
+                  <div class="tagi">
+                    <span class="hole"></span>
+                    <span class="tag-id">TXT / 001</span>
+                  </div>
+                </div>
+                <div class="hero-stat hero-stat-left">
+                  <span class="big-num">{{ pad(tagsLeft) }}</span>
+                  <span class="big-label">Tags left</span>
+                </div>
+                <h1><span class="strong">Every</span> word,<br><span class="fade">carefully</span><br><span class="strong">considered.</span></h1>
+                <div class="hero-stat hero-stat-right">
+                  <span class="big-num">{{ pad(typeCount) }}</span>
+                  <span class="big-label">Tag types under review</span>
+                </div>
+              </div>
               <div class="hero-actions">
                 <p class="lede">Review each underlined segment, compare suggestions, or retype it yourself. Nothing leaves this session until you approve it.</p>
                 <button class="pill pill-dark cta" :disabled="!job" @click="startReview">Start review <span class="arrow">&rarr;</span></button>
               </div>
-            </div>
-
-            <div class="hero-visual" aria-hidden="true">
-              <svg class="spark" viewBox="0 0 24 24"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
-              <span class="orbit orbit-a"></span>
-              <span class="orbit orbit-b"></span>
-              <span class="orbit-label label-a"><i></i>Human review<br>in the loop</span>
-              <span class="orbit-label label-b"><i></i>Live suggestions<br>on every tag</span>
-              <div class="tagi">
-                <span class="hole"></span>
-                <span class="tag-id">TXT / 001</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-stats">
-            <div class="big-stat">
-              <span class="big-num">{{ pad(tagsLeft) }}</span>
-              <span class="big-label">Tags left<br>in this draft</span>
-            </div>
-            <div class="big-stat">
-              <span class="big-num">{{ pad(typeCount) }}</span>
-              <span class="big-label">Tag types<br>under review</span>
             </div>
           </div>
         </section>
