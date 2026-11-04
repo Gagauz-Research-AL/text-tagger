@@ -52,6 +52,7 @@ replaceSegment(rj, 2, "mail man");
 check("split: retyped span keeps its tag", rj.underlines.length, 5);
 check("split: span covers replacement", [rj.underlines[2].left_pos, rj.underlines[2].right_pos], [22, 30]);
 check("split: text updated", rj.text, "the cat sitted on the mail man while the dog barked at the mailman");
+check("replacement preserves captured original", rj.underlines[2].original, "mat");
 
 drop(rj, 1);
 check("drop keeps text, removes tag", [rj.text, rj.underlines.length],

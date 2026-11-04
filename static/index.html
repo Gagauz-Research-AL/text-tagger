@@ -226,21 +226,40 @@
   }
   .rail {
     position: absolute;
-    left: 0;
+    left: 46px;
     top: 50%;
-    z-index: 1;
+    z-index: 3;
     transform: translateY(-50%);
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
-    width: 14px;
-    color: rgba(33, 33, 33, 0.38);
+    color: rgba(33, 33, 33, 0.52);
     font-size: 8.5px;
     letter-spacing: 0.08em;
   }
-  .rail span.active { color: var(--ink); }
-  .rail i { display: block; width: 1px; height: 24px; background: rgba(33, 33, 33, 0.16); }
+  .rail a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: inherit;
+    line-height: 1;
+    text-decoration: none;
+    transition: color 0.2s ease;
+  }
+  .rail a:hover, .rail a.active { color: var(--ink); }
+  .rail .rail-num { width: 14px; flex: none; }
+  .rail .rail-label {
+    color: inherit;
+    font-size: 7.5px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    opacity: 0.72;
+    transition: opacity 0.2s ease;
+  }
+  .rail a:hover .rail-label, .rail a.active .rail-label { opacity: 1; }
+  .rail i { display: block; margin-left: 6px; width: 1px; height: 24px; background: rgba(33, 33, 33, 0.16); }
   .eyebrow {
     display: flex;
     align-items: center;
@@ -259,7 +278,7 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     column-gap: clamp(16px, 2vw, 28px);
-    align-items: center;
+    align-items: end;
   }
   h1 {
     position: relative;
@@ -407,38 +426,41 @@
     position: relative;
     z-index: 2;
     display: flex;
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: column-reverse;
+    gap: 8px;
   }
   .hero-stat-left {
     grid-column: 1;
-    justify-self: end;
-    align-items: flex-end;
-    text-align: right;
-  }
-  .hero-stat-right {
-    grid-column: 3;
     justify-self: start;
     align-items: flex-start;
     text-align: left;
   }
+  .hero-stat-right {
+    grid-column: 3;
+    justify-self: end;
+    align-items: flex-end;
+    text-align: right;
+  }
+  @media (min-width: 901px) {
+    .hero-stat-left { margin-left: clamp(0px, 715px - 50vw, 90px); }
+  }
   .big-num {
     color: var(--ink);
     font-family: var(--display);
-    font-size: clamp(40px, 4.4vw, 62px);
+    font-size: clamp(116px, 12.4vw, 196px);
     font-weight: 400;
-    line-height: 0.82;
+    line-height: 0.76;
     letter-spacing: -0.06em;
     font-variant-numeric: tabular-nums;
   }
   .big-label {
-    max-width: 150px;
     color: rgba(33, 33, 33, 0.54);
     font-size: 9px;
     font-weight: 500;
     line-height: 1.4;
     letter-spacing: 0.12em;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .workspace { padding: 8px 22px 22px; }
@@ -862,6 +884,7 @@
     .nav { display: none; }
     .topbar { grid-template-columns: 1fr auto; padding: 22px 30px; }
     .hero { padding: 30px 30px 0; }
+    .rail { left: 30px; }
     .hero-visual { top: 38%; width: min(54%, 380px); height: 280px; opacity: 0.26; }
     .hero-stage { display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; }
     .hero-stage h1 { order: 1; flex: 0 0 100%; max-width: none; }
@@ -881,6 +904,7 @@
       border-right: 1px solid rgba(33, 33, 33, 0.16);
     }
     .hero-stat-right { justify-self: auto; align-items: baseline; text-align: left; }
+    .big-num { font-size: clamp(42px, 6vw, 54px); line-height: 0.82; }
     .hero-stat .big-label { max-width: none; white-space: nowrap; }
     .workspace { padding: 6px 14px 14px; }
     .workspace-label { padding: 0 16px 11px; }
@@ -976,9 +1000,13 @@
 
       <main>
         <section class="hero" id="overview">
-          <div class="rail" aria-hidden="true">
-            <span class="active">01</span><i></i><span>02</span><i></i><span>03</span>
-          </div>
+          <nav class="rail" aria-label="Table of contents">
+            <a href="#overview" class="active" aria-label="01 Overview"><span class="rail-num" aria-hidden="true">01</span><span class="rail-label" aria-hidden="true">Overview</span></a>
+            <i aria-hidden="true"></i>
+            <a href="#editor" aria-label="02 Workspace"><span class="rail-num" aria-hidden="true">02</span><span class="rail-label" aria-hidden="true">Workspace</span></a>
+            <i aria-hidden="true"></i>
+            <a href="#guide" aria-label="03 Guide"><span class="rail-num" aria-hidden="true">03</span><span class="rail-label" aria-hidden="true">Guide</span></a>
+          </nav>
           <div class="hero-inner">
             <div class="hero-copy">
               <p class="eyebrow">
@@ -1024,10 +1052,11 @@
               </div>
               <div class="editor-scroll">
                 <div id="text-display" contenteditable="true" spellcheck="false"
-                     @input="onTextInput" @click="onTagClick" @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
+                     @input="onTextInput" @click="onTagClick" @blur="onTextBlur"
+                     @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
               </div>
               <div class="card-foot">
-                <span>Edit the draft directly &mdash; touching a word clears its tag.</span>
+                <span>Click a tag, then type to replace it &mdash; other edits behave as before.</span>
                 <span class="keys"><kbd>&#8984;</kbd><kbd>Z</kbd> undo <kbd>&#8984;</kbd><kbd>Y</kbd> redo</span>
               </div>
             </section>
@@ -1158,6 +1187,7 @@ const normalizeText = (el) => {
 createApp({
   data: () => ({
     job: null, sel: null, cand: 0, retypeText: "", toast: "",
+    inlineReplace: null, inlineArmed: false,
     history: [], future: [],
   }),
   computed: {
@@ -1267,10 +1297,74 @@ createApp({
     },
     handleKeydown(ev) {
       const mod = ev.ctrlKey || ev.metaKey;
-      if (!mod) return;
-      const k = ev.key.toLowerCase();
-      if (k === "z") { ev.preventDefault(); if (ev.shiftKey) this.redo(); else this.undo(); }
-      else if (k === "y") { ev.preventDefault(); this.redo(); }
+      if (mod) {
+        this.endInlineReplace();
+        this.inlineArmed = false;
+        const k = ev.key.toLowerCase();
+        if (k === "z") { ev.preventDefault(); if (ev.shiftKey) this.redo(); else this.undo(); }
+        else if (k === "y") { ev.preventDefault(); this.redo(); }
+        return;
+      }
+      if (this.inlineReplace) { this.handleInlineKeydown(ev); return; }
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Tab"].includes(ev.key)) {
+        this.inlineArmed = false;
+        return;
+      }
+      if (!ev.altKey && ev.key.length === 1 && this.inlineArmed && this.sel !== null) {
+        const off = this.caretOffset();
+        if (off !== null && this.spanAtCaret(off) === this.sel) {
+          ev.preventDefault();
+          this.pushHistory(off);
+          this.inlineReplace = { idx: this.sel, text: "" };
+          this.inlineArmed = false;
+          this.applyInlineText(ev.key);
+        }
+      }
+    },
+    handleInlineKeydown(ev) {
+      const r = this.inlineReplace;
+      if (!r) return;
+      if (ev.key === "Backspace") {
+        ev.preventDefault();
+        if (r.text.length > 1) this.applyInlineText(r.text.slice(0, -1));
+        return;
+      }
+      if (ev.key === "Delete") { ev.preventDefault(); return; }
+      if (!ev.altKey && !ev.ctrlKey && !ev.metaKey && ev.key.length === 1) {
+        ev.preventDefault();
+        this.applyInlineText(r.text + ev.key);
+        return;
+      }
+      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Tab"].includes(ev.key)) {
+        this.endInlineReplace();
+        this.inlineArmed = false;
+        return;
+      }
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        this.endInlineReplace();
+        this.inlineArmed = false;
+        return;
+      }
+      if (ev.key === "Enter") {
+        this.endInlineReplace();
+        this.inlineArmed = false;
+      }
+    },
+    endInlineReplace() {
+      this.inlineReplace = null;
+    },
+    applyInlineText(text) {
+      const r = this.inlineReplace;
+      if (!r || !this.job) return;
+      const u = this.job.underlines[r.idx];
+      if (!u) { this.endInlineReplace(); return; }
+      replaceSegment(this.job, r.idx, text);
+      r.text = text;
+      const node = this.displayEl().querySelector('.tag[data-i="' + r.idx + '"]');
+      if (node) node.textContent = text;
+      this.setCaretOffset(u.left_pos + text.length);
+      this.styleSelected();
     },
     pushHistory(caret) {
       this.history.push({
@@ -1330,10 +1424,24 @@ createApp({
     },
     onTagClick(ev) {
       const t = ev.target.closest(".tag");
-      if (t) this.select(+t.dataset.i);
-      else this.syncSelectionWithCaret();
+      this.endInlineReplace();
+      if (t) {
+        this.select(+t.dataset.i);
+        this.inlineArmed = true;
+      } else {
+        this.inlineArmed = false;
+        this.syncSelectionWithCaret();
+      }
     },
-    onEnter(ev) { ev.target.blur(); },
+    onEnter(ev) {
+      this.endInlineReplace();
+      this.inlineArmed = false;
+      ev.target.blur();
+    },
+    onTextBlur() {
+      this.endInlineReplace();
+      this.inlineArmed = false;
+    },
     select(i) { this.sel = i; this.cand = 0; this.retypeText = ""; this.styleSelected(); },
     onTextInput(ev) {
       this.updateJobFromDOM();
