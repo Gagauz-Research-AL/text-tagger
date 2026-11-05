@@ -475,7 +475,94 @@
     letter-spacing: 0.16em;
     text-transform: uppercase;
   }
+  .backlog {
+    margin: 0 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.58);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.14));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(22px) saturate(1.04);
+    -webkit-backdrop-filter: blur(22px) saturate(1.04);
+    overflow: hidden;
+  }
+  .backlog-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    border-bottom: 1px solid rgba(33, 33, 33, 0.1);
+  }
+  .backlog-summary {
+    color: rgba(33, 33, 33, 0.48);
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    font-variant-numeric: tabular-nums;
+  }
+  .backlog-summary .sep { opacity: 0.4; margin: 0 4px; }
+  .backlog-list { list-style: none; margin: 0; padding: 0; }
+  .backlog-item {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 64px 94px auto;
+    gap: 14px;
+    align-items: center;
+    padding: 12px 24px;
+    border-top: 1px solid rgba(33, 33, 33, 0.08);
+    transition: background 0.15s ease;
+  }
+  .backlog-item:first-child { border-top: 0; }
+  .backlog-item.active { background: rgba(255, 255, 255, 0.26); }
+  .backlog-num {
+    width: 26px; height: 26px;
+    display: grid; place-items: center;
+    border-radius: 50%;
+    font-size: 8.5px; font-weight: 600;
+    color: rgba(33, 33, 33, 0.48);
+    transition: all 0.15s ease;
+  }
+  .backlog-item.active .backlog-num { background: var(--ink); color: #fff; }
+  .backlog-open {
+    background: transparent; border: 0; padding: 0;
+    text-align: left; color: var(--ink);
+    font: 400 12.5px/1.4 var(--sans);
+    cursor: pointer; overflow: hidden;
+    text-overflow: ellipsis; white-space: nowrap;
+    transition: opacity 0.15s ease;
+  }
+  .backlog-open:hover { opacity: 0.7; }
+  .backlog-open:disabled { color: var(--muted); cursor: default; }
+  .backlog-meta {
+    color: rgba(33, 33, 33, 0.45);
+    font-size: 8.5px; font-weight: 500;
+    letter-spacing: 0.11em; text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .backlog-status {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: rgba(33, 33, 33, 0.5);
+  }
+  .backlog-status i {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .backlog-item.reviewing .backlog-status i { background: var(--accent); }
+  .backlog-item.approved .backlog-status i { background: var(--ink); }
+  .backlog-item.skipped .backlog-status i { background: var(--warn); }
+  .backlog-actions { display: flex; gap: 10px; justify-content: end; }
+  .queue-action {
+    background: transparent; border: 0; padding: 0;
+    color: rgba(33, 33, 33, 0.54);
+    font: 500 8.5px/1 var(--sans);
+    text-transform: uppercase; letter-spacing: 0.1em;
+    cursor: pointer; transition: color 0.15s ease;
+    text-decoration: none;
+  }
+  .queue-action:hover { color: var(--ink); }
+  .queue-action.skip-action:hover { color: var(--bad); }
   .workspace-grid {
+
     display: grid;
     grid-template-columns: minmax(0, 1fr) 396px;
     gap: 16px;
@@ -909,6 +996,14 @@
     .workspace { padding: 6px 14px 14px; }
     .workspace-label { padding: 0 16px 11px; }
     .footer-panel { padding: 32px 30px 18px; }
+    .backlog-head { padding: 13px 18px; }
+    .backlog-item {
+      grid-template-columns: 28px minmax(0, 1fr) auto;
+      padding: 12px 18px;
+    }
+    .backlog-meta { grid-column: 2; grid-row: 2; padding-top: 4px; }
+    .backlog-status { grid-column: 3; grid-row: 1; }
+    .backlog-actions { grid-column: 3; grid-row: 2; padding-top: 4px; }
   }
 
   @media (max-width: 680px) {
@@ -956,6 +1051,17 @@
     .foot-block-head { min-height: auto; }
     .foot-bottom { flex-wrap: wrap; gap: 8px 16px; font-size: 7px; }
     .foot-bottom .spark { display: none; }
+    .backlog-head { padding: 12px 16px; }
+    .backlog-summary { font-size: 7.5px; letter-spacing: 0.08em; }
+    .backlog-item {
+      grid-template-columns: 1fr auto;
+      padding: 12px 16px;
+    }
+    .backlog-num { display: none; }
+    .backlog-open { font-size: 12px; }
+    .backlog-meta { grid-column: 1; grid-row: 2; padding-top: 4px; font-size: 8px; }
+    .backlog-status { grid-column: 2; grid-row: 1; }
+    .backlog-actions { grid-column: 2; grid-row: 2; padding-top: 4px; }
   }
 
   @media (max-width: 360px) {
@@ -991,8 +1097,10 @@
         </nav>
         <div class="top-actions">
           <span class="top-meta" v-if="job"><i class="status-dot"></i>{{ pad(tagsLeft) }} tags left</span>
-          <button class="pill pill-dark" :disabled="!job" @click="approve">
-            <span>{{ job ? "Approve" : "Loading" }}</span>
+          <button class="pill pill-dark" :disabled="!canApprove" @click="approve">
+            <span v-if="!queue.length">Loading</span>
+            <span v-else-if="allDone">Done</span>
+            <span v-else>Approve</span>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8 8 2M3 2h5v5"/></svg>
           </button>
         </div>
@@ -1043,15 +1151,41 @@
 
         <section class="workspace" id="editor">
           <div class="workspace-label"><span>Workspace</span><span>Human review / v1.0</span></div>
+
+          <section class="backlog" aria-labelledby="backlog-title">
+            <div class="backlog-head">
+              <h2 class="label" id="backlog-title">Backlog</h2>
+              <span class="backlog-summary">{{pad(pendingCount)}} items <span class="sep">&middot;</span> {{pad(tagsLeft)}} tags left</span>
+            </div>
+            <ul class="backlog-list">
+              <li v-for="(item, i) in queue" :key="item.id"
+                  class="backlog-item"
+                  :class="[item.status, { active: item.id === activeId }]">
+                <span class="backlog-num">{{pad(i + 1)}}</span>
+                <button class="backlog-open" @click="openItem(item)" :disabled="item.status === 'approved'">
+                  {{ itemJob(item).text }}
+                </button>
+                <span class="backlog-meta">{{pad(tagCount(item))}} tags</span>
+                <span class="backlog-status">
+                  <i></i>{{ statusLabel(item.status) }}
+                </span>
+                <div class="backlog-actions">
+                  <button v-if="item.status === 'skipped'" class="queue-action" @click="reopenItem(item)">Reopen</button>
+                  <button v-else-if="item.status !== 'approved'" class="queue-action skip-action" @click="skipItem(item)">Skip</button>
+                </div>
+              </li>
+            </ul>
+          </section>
+
           <div class="workspace-grid">
             <section class="editor-card" aria-label="Draft text">
               <div class="card-topline">
                 <span>01 &mdash; Draft</span>
-                <span class="doc-meta">{{ pad(wordCount) }} words <span class="sep">&middot;</span> {{ pad(tagsLeft) }} tags</span>
+                <span class="doc-meta">{{ pad(wordCount) }} words <span class="sep">&middot;</span> {{ pad(docTagsLeft) }} tags</span>
                 <span class="doc-extra">Click a tag to inspect</span>
               </div>
               <div class="editor-scroll">
-                <div id="text-display" contenteditable="true" spellcheck="false"
+                <div id="text-display" :contenteditable="canApprove ? 'true' : 'false'" spellcheck="false"
                      @input="onTextInput" @click="onTagClick" @blur="onTextBlur"
                      @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
               </div>
@@ -1064,7 +1198,7 @@
             <aside id="segments" aria-label="Segment details">
               <div class="panel-head">
                 <span class="label">02 &mdash; Segment</span>
-                <span class="panel-index" v-if="sel !== null">{{ pad(sel + 1) }} / {{ pad(tagsLeft) }}</span>
+                <span class="panel-index" v-if="sel !== null">{{ pad(sel + 1) }} / {{ pad(docTagsLeft) }}</span>
                 <span class="panel-index" v-else>None</span>
               </div>
 
@@ -1186,11 +1320,16 @@ const normalizeText = (el) => {
 
 createApp({
   data: () => ({
+    queue: [],
+    activeId: null,
     job: null, sel: null, cand: 0, retypeText: "", toast: "",
     inlineReplace: null, inlineArmed: false,
     history: [], future: [],
   }),
   computed: {
+    activeItem() {
+      return this.queue.find(i => i.id === this.activeId);
+    },
     current() {
       const u = this.sel === null ? null : this.job && this.job.underlines[this.sel];
       if (!u || !this.job) return null;
@@ -1202,26 +1341,63 @@ createApp({
       };
     },
     tagsLeft() {
+      return this.queue.reduce((sum, item) => {
+        if (item.status === "approved" || item.status === "skipped") return sum;
+        const j = (item.id === this.activeId) ? this.job : item.job;
+        return sum + (j ? j.underlines.length : 0);
+      }, 0);
+    },
+    docTagsLeft() {
       return this.job ? this.job.underlines.length : 0;
     },
     typeCount() {
-      if (!this.job) return 0;
-      return new Set(this.job.underlines.map((u) => u.type).filter(Boolean)).size;
+      if (!this.queue.length) return 0;
+      const pending = this.queue.filter(i => i.status !== "approved" && i.status !== "skipped");
+      const types = new Set();
+      pending.forEach(item => {
+        const j = (item.id === this.activeId) ? this.job : item.job;
+        if (j) j.underlines.forEach(u => types.add(u.type));
+      });
+      return types.size;
     },
     wordCount() {
       if (!this.job) return 0;
       const t = this.job.text.trim();
       return t ? t.split(/\s+/).length : 0;
     },
+    pendingCount() {
+      return this.queue.filter(i => i.status === "queued" || i.status === "reviewing").length;
+    },
+    allDone() {
+      return this.queue.length > 0 && this.queue.every(i => i.status === "approved" || i.status === "skipped");
+    },
+    canApprove() {
+      return this.activeItem && this.activeItem.status === "reviewing";
+    }
   },
   methods: {
     pad(n) { return String(Number(n) || 0).padStart(2, "0"); },
     kindOf(t) { return typePrefix(t); },
     displayEl() { return document.getElementById("text-display"); },
+    itemJob(item) {
+      return (item.id === this.activeId) ? this.job : item.job;
+    },
+    tagCount(item) {
+      const j = this.itemJob(item);
+      return j ? j.underlines.length : 0;
+    },
+    statusLabel(s) {
+      const map = { queued: "Queued", reviewing: "In review", approved: "Approved", skipped: "Skipped" };
+      return map[s] || s;
+    },
     renderDisplay() {
       const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
       let html = "";
       let pos = 0;
+      if (!this.job) {
+        this.displayEl().innerHTML = "";
+        return;
+      }
       this.job.underlines.forEach((u, i) => {
         if (u.left_pos > pos) html += esc(this.job.text.slice(pos, u.left_pos));
         const cls = ["tag", "seg-" + typePrefix(u.type)];
@@ -1506,27 +1682,148 @@ createApp({
       const editor = document.getElementById("editor");
       if (editor) editor.scrollIntoView({ behavior: "smooth", block: "start" });
     },
+    saveActive() {
+      if (!this.activeId) return;
+      const item = this.activeItem;
+      if (!item) return;
+      item.job = this.job;
+      item.history = this.history.map(h => ({ ...h, underlines: h.underlines.map(u => ({ ...u })) }));
+      item.future = this.future.map(f => ({ ...f, underlines: f.underlines.map(u => ({ ...u })) }));
+      item.sel = this.sel;
+      item.cand = this.cand;
+      item.retypeText = this.retypeText;
+    },
+    loadItem(item) {
+      this.saveActive();
+      this.endInlineReplace();
+      this.inlineArmed = false;
+
+      const previous = this.activeItem;
+      if (previous && previous.status === "reviewing") {
+        previous.status = "queued";
+      }
+
+      this.activeId = item.id;
+      this.job = item.job ? { ...item.job, underlines: item.job.underlines.map(u => ({ ...u })) } : null;
+      this.history = item.history ? item.history.map(h => ({ ...h, underlines: h.underlines.map(u => ({ ...u })) })) : [];
+      this.future = item.future ? item.future.map(f => ({ ...f, underlines: f.underlines.map(u => ({ ...u })) })) : [];
+      this.sel = item.sel;
+      this.cand = item.cand || 0;
+      this.retypeText = item.retypeText || "";
+
+      if (item.status === "queued") {
+        item.status = "reviewing";
+      }
+
+      this.$nextTick(() => {
+        this.renderDisplay();
+        this.styleSelected();
+        if (this.sel !== null) {
+          this.setCaretOffset(this.job.underlines[this.sel].left_pos);
+        }
+      });
+    },
+    openItem(item) {
+      if (item.status === "approved") return;
+      if (item.id === this.activeId) return;
+      if (item.status === "skipped") item.status = "queued";
+      this.loadItem(item);
+    },
+    skipItem(item) {
+      if (item.status === "approved") return;
+      const id = item.id;
+      item.status = "skipped";
+
+      fetch("/api/skip", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      }).catch(e => console.error("skip log failed", e));
+
+      if (this.activeId === id) {
+        this.advance();
+      }
+    },
+    reopenItem(item) {
+      item.status = "queued";
+      this.openItem(item);
+    },
+    advance() {
+      const currentIdx = this.queue.findIndex(i => i.id === this.activeId);
+      let nextItem = null;
+      if (currentIdx !== -1) {
+        for (let i = 1; i <= this.queue.length; i++) {
+          const candidate = this.queue[(currentIdx + i) % this.queue.length];
+          if (candidate.status === "queued") {
+            nextItem = candidate;
+            break;
+          }
+        }
+      } else {
+        nextItem = this.queue.find(i => i.status === "queued");
+      }
+
+      if (nextItem) {
+        this.loadItem(nextItem);
+      } else {
+        // All done or skipped
+        this.activeId = null;
+        this.job = null;
+        this.history = [];
+        this.future = [];
+        this.sel = null;
+        this.cand = 0;
+        this.retypeText = "";
+        this.endInlineReplace();
+        this.inlineArmed = false;
+        this.renderDisplay();
+        this.toast = "backlog cleared";
+        setTimeout(() => (this.toast = ""), 3000);
+      }
+    },
     async approve() {
+      if (!this.canApprove) return;
+      const item = this.activeItem;
       const finalText = approve(this.job);
       try {
         await fetch("/api/result", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: finalText }),
+          body: JSON.stringify({ id: item.id, text: finalText }),
         });
-        this.toast = "approved";
+        item.status = "approved";
+        this.toast = "approved · " + item.id;
         setTimeout(() => (this.toast = ""), 3000);
+        this.advance();
       } catch (e) {
         this.toast = "failed to save: " + e;
         setTimeout(() => (this.toast = ""), 5000);
       }
     },
   },
-  async mounted() {
-    window.__tt = this;
-    document.addEventListener("selectionchange", this.onSelectionChange.bind(this));
-    this.job = makeJob(await (await fetch("/api/job")).json());
-    this.$nextTick(this.renderDisplay);
-  },
+    async mounted() {
+      window.__tt = this;
+      document.addEventListener("selectionchange", this.onSelectionChange.bind(this));
+      try {
+        const data = await (await fetch("/api/jobs")).json();
+        this.queue = data.jobs.map((raw, i) => ({
+          id: raw.id,
+          job: makeJob(raw),
+          status: i === 0 ? "reviewing" : "queued",
+          history: [],
+          future: [],
+          sel: null,
+          cand: 0,
+          retypeText: "",
+        }));
+        if (this.queue.length) {
+          this.loadItem(this.queue[0]);
+        }
+      } catch (e) {
+        console.error("failed to load backlog", e);
+        this.toast = "failed to load backlog";
+      }
+      this.$nextTick(() => this.renderDisplay());
+    },
+
 }).mount("#app");
 </script>
 </body>

@@ -5,7 +5,9 @@ Routes:
     GET  /              static/index.html
     GET  /static/...    vendored assets (vue, logic.js)
     GET  /api/job       the mock job (external JSON format)
+    GET  /api/jobs      the mock job backlog
     POST /api/result    prints the approved final text to the console
+    POST /api/skip      prints the skipped job ID to the console
 """
 
 import json
@@ -13,7 +15,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-from mock_data import generate_mock
+from mock_data import generate_mock, generate_mock_jobs
 from tagger import approve
 
 ROOT = Path(__file__).parent / "static"
@@ -44,24 +46,33 @@ class Handler(BaseHTTPRequestHandler):
             self._serve_file("index.html")
         elif path == "/api/job":
             self._json(200, generate_mock())
+        elif path == "/api/jobs":
+            self._json(200, {"jobs": generate_mock_jobs()})
         elif path.startswith("/static/"):
             self._serve_file(path.removeprefix("/static/"))
         else:
             self._send(404, "not found")
 
     def do_POST(self):
-        if self.path.rstrip("/") != "/api/result":
-            self._send(404, "not found")
-            return
+        path = self.path.rstrip("/")
         length = int(self.headers.get("Content-Length", 0))
         try:
             raw = json.loads(self.rfile.read(length))
         except json.JSONDecodeError:
             self._json(400, {"status": "bad json"})
             return
-        print("\n--- FINAL TEXT ---")
-        print(approve({"text": str(raw.get("text", "")), "underlines": []}), flush=True)
-        self._json(200, {"status": "saved"})
+
+        if path == "/api/result":
+            job_id = raw.get("id", "unknown")
+            print(f"\n--- FINAL TEXT [{job_id}] ---")
+            print(approve({"text": str(raw.get("text", "")), "underlines": []}), flush=True)
+            self._json(200, {"status": "saved", "id": job_id})
+        elif path == "/api/skip":
+            job_id = raw.get("id", "unknown")
+            print(f"\n--- SKIPPED [{job_id}] ---", flush=True)
+            self._json(200, {"status": "skipped", "id": job_id})
+        else:
+            self._send(404, "not found")
 
     def _serve_file(self, name):
         f = (ROOT / name).resolve()
