@@ -1,6 +1,18 @@
 // Node test for static/logic.js — expectations recorded from observed
 // behaviour of the pure logic (probe run), snapshotted into assertions.
-const { makeJob, piecesOf, replaceSegment, drop, approve, applyDiffToUnderlines } = require("./logic.js");
+const {
+  makeJob,
+  piecesOf,
+  replaceSegment,
+  drop,
+  approve,
+  applyDiffToUnderlines,
+  makeQueueItem,
+  mergeWindowJobs,
+  pageFromInput,
+  pendingTagCount,
+  formatProbability,
+} = require("./logic.js");
 
 let failures = 0;
 function check(name, actual, expected) {
@@ -138,6 +150,64 @@ ok.text = snap2.text;
 ok.underlines = snap2.underlines;
 check("undo after candidate reinstates original word", ok.text.slice(22, 25), "mat");
 check("undo after candidate restores span", [ok.underlines[2].left_pos, ok.underlines[2].right_pos], [22, 25]);
+
+// --- window merge --------------------------------------------------------
+const dirty = makeQueueItem({ id: 1, text: "old one", status: "queued", score: 0.1, tag_count: 2 }, 1);
+dirty.dirty = true;
+dirty.job = { text: "edited one", underlines: [] };
+dirty.history = [{ text: "old one", underlines: [], caret: 0 }];
+const approvedDirty = makeQueueItem({ id: 2, text: "approved", status: "approved" }, 2);
+approvedDirty.dirty = true;
+const untouched = makeQueueItem({ id: 3, text: "untouched", status: "queued" }, 3);
+
+const merged = mergeWindowJobs(
+  [dirty, approvedDirty, untouched],
+  [
+    { id: 1, text: "server one", status: "queued", score: 0.5, tag_count: 3 },
+    { id: 4, text: "four", status: "skipped", score: null, tag_count: 0 },
+  ],
+  10
+);
+check("window merge keeps only dirty pending items", merged.map((item) => item.id), [1, 4]);
+check("window merge marks carried item", merged[0].carried, true);
+check("window merge preserves dirty job state", [merged[0].job.text, merged[0].history.length], ["edited one", 1]);
+check("window merge preserves carried ordinal", merged[0].ordinal, 1);
+check("window merge deduplicates incoming carried item", merged[1].id, 4);
+check("window merge assigns global ordinal", merged[1].ordinal, 12);
+check("window merge stores summary metadata", [merged[1].score, merged[1].tag_count], [null, 0]);
+
+const freshMerge = mergeWindowJobs([untouched], [{ id: 5, text: "five", status: "queued" }], 0);
+check("window merge drops clean old items", freshMerge.map((item) => item.id), [5]);
+check("window merge fresh item is not carried", freshMerge[0].carried, false);
+check("window merge fresh item defaults", [freshMerge[0].dirty, freshMerge[0].ordinal, freshMerge[0].tag_count], [false, 1, 0]);
+
+// --- probability ---------------------------------------------------------
+check("probability formats real ranker score", formatProbability(0.03896828860423509), "4%");
+check("probability rounds to nearest percent", formatProbability(0.756), "76%");
+check("probability clamps above 100%", formatProbability(1.5), "100%");
+check("probability clamps below 0%", formatProbability(-0.1), "0%");
+check("probability handles missing scores", formatProbability(null), "—");
+check("probability handles non-finite scores", formatProbability(NaN), "—");
+
+// --- tags left -----------------------------------------------------------
+const tagItems = [
+  { status: "queued", tag_count: 2, carried: false },
+  { status: "reviewing", tag_count: 1, carried: true },
+  { status: "queued", tag_count: 0, carried: false },
+  { status: "approved", tag_count: 9, carried: false },
+  { status: "skipped", tag_count: 7, carried: true },
+  { status: "queued", tag_count: null, carried: false },
+];
+check("tags left sums pending resident jobs", pendingTagCount(tagItems), 3);
+check("tags left handles no items", pendingTagCount([]), 0);
+
+// --- jump-to-page --------------------------------------------------------
+check("jump page converts display page to index", pageFromInput("11", 20), 10);
+check("jump page clamps above total", pageFromInput("999", 20), 19);
+check("jump page clamps below one", pageFromInput("0", 20), 0);
+check("jump page truncates decimals", pageFromInput("2.9", 20), 1);
+check("jump page rejects empty input", pageFromInput("", 20), null);
+check("jump page rejects non-numeric input", pageFromInput("abc", 20), null);
 
 if (failures) {
   console.error(`\n${failures} failure(s)`);

@@ -210,6 +210,18 @@
     transform: translateY(-1px);
     box-shadow: 0 12px 26px -14px rgba(0, 0, 0, 0.65);
   }
+  .pill-reject {
+    background: rgba(255, 255, 255, 0.22);
+    border-color: rgba(33, 33, 33, 0.24);
+    color: var(--ink-soft);
+    padding: 12px 21px;
+  }
+  .pill-reject:hover {
+    background: rgba(255, 255, 255, 0.48);
+    border-color: var(--bad);
+    color: var(--bad);
+    transform: translateY(-1px);
+  }
   .pill.small { padding: 10px 15px; font-size: 10px; }
   .arrow { font-size: 13px; line-height: 0.8; }
 
@@ -502,7 +514,7 @@
   .backlog-list { list-style: none; margin: 0; padding: 0; }
   .backlog-item {
     display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) 64px 94px 64px;
+    grid-template-columns: 32px minmax(0, 1fr) 118px 94px 64px;
     gap: 14px;
     align-items: center;
     padding: 12px 24px;
@@ -531,6 +543,19 @@
   .backlog-open:hover { opacity: 0.7; }
   .backlog-item.approved .backlog-open { color: var(--muted); }
   .backlog-item.approved .backlog-open:hover { opacity: 1; color: var(--ink); }
+  .backlog-figures {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    white-space: nowrap;
+  }
+  .backlog-score {
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+  }
   .backlog-meta {
     color: rgba(33, 33, 33, 0.45);
     font-size: 8.5px; font-weight: 500;
@@ -595,6 +620,30 @@
   .backlog-pager button:disabled { opacity: 0.28; cursor: default; }
   .backlog-pager button:not(:disabled):hover { color: var(--ink); }
   .backlog-page { color: var(--ink); }
+  .backlog-jump {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .backlog-jump input {
+    width: 46px;
+    padding: 2px 2px 1px;
+    border: 0;
+    border-bottom: 1px solid var(--line-strong);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    letter-spacing: inherit;
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+  .backlog-jump input::-webkit-outer-spin-button,
+  .backlog-jump input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  .backlog-jump input::placeholder { color: rgba(33, 33, 33, 0.32); }
   .workspace-grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 396px;
@@ -1056,7 +1105,7 @@
       grid-template-columns: 28px minmax(0, 1fr) 88px;
       padding: 12px 18px;
     }
-    .backlog-meta { grid-column: 2; grid-row: 2; padding-top: 4px; }
+    .backlog-figures { grid-column: 2; grid-row: 2; padding-top: 4px; }
     .backlog-status { grid-column: 3; grid-row: 1; }
     .backlog-actions { grid-column: 3; grid-row: 2; padding-top: 4px; }
   }
@@ -1116,7 +1165,8 @@
     }
     .backlog-num { display: none; }
     .backlog-open { font-size: 12px; }
-    .backlog-meta { grid-column: 1; grid-row: 2; padding-top: 4px; font-size: 8px; }
+    .backlog-figures { grid-column: 1; grid-row: 2; padding-top: 4px; gap: 8px; }
+    .backlog-meta { font-size: 8px; }
     .backlog-status { grid-column: 2; grid-row: 1; }
     .backlog-actions { grid-column: 2; grid-row: 2; padding-top: 4px; }
   }
@@ -1215,14 +1265,17 @@
               <span class="backlog-summary">{{pad(pendingCount)}} items <span class="sep">&middot;</span> {{pad(tagsLeft)}} tags left</span>
             </div>
             <ul class="backlog-list">
-              <li v-for="(item, i) in pagedQueue" :key="item.id"
+              <li v-for="item in pagedQueue" :key="item.id"
                   class="backlog-item"
                   :class="[item.status, { active: item.id === activeId }]">
-                <span class="backlog-num">{{pad(pageStart + i + 1)}}</span>
+                <span class="backlog-num">{{pad(item.ordinal)}}</span>
                 <button class="backlog-open" @click="openItem(item)">
                   {{ itemJob(item).text }}
                 </button>
-                <span class="backlog-meta">{{pad(tagCount(item))}} tags</span>
+                <span class="backlog-figures">
+                  <span class="backlog-score">{{ formatScore(item.score) }}</span>
+                  <span class="backlog-meta">{{pad(tagCount(item))}} tags</span>
+                </span>
                 <span class="backlog-status">
                   <i></i>{{ statusLabel(item.status) }}
                 </span>
@@ -1233,12 +1286,17 @@
                 </div>
               </li>
             </ul>
-            <div class="backlog-foot" v-if="queue.length > pageSize">
-              <span class="backlog-range">{{ pad(pageStart + 1) }}&ndash;{{ pad(pageStart + pagedQueue.length) }} / {{ pad(queue.length) }}</span>
+            <div class="backlog-foot" v-if="totalPages > 1">
+              <span class="backlog-range">{{ pad(pageStart + 1) }}&ndash;{{ pad(rangeEnd) }} / {{ pad(total) }}</span>
               <div class="backlog-pager" aria-label="Backlog pagination">
-                <button type="button" :disabled="page === 0" @click="goToPage(page - 1)" aria-label="Previous backlog page">Prev</button>
+                <button type="button" :disabled="page === 0 || windowLoading" @click="goToPage(page - 1)" aria-label="Previous backlog page">Prev</button>
                 <span class="backlog-page" aria-live="polite">{{ pad(page + 1) }} / {{ pad(pageCount) }}</span>
-                <button type="button" :disabled="page >= pageCount - 1" @click="goToPage(page + 1)" aria-label="Next backlog page">Next</button>
+                <form class="backlog-jump" novalidate @submit.prevent="jumpToPage">
+                  <input v-model="jumpPage" type="number" min="1" :max="pageCount"
+                         inputmode="numeric" aria-label="Jump to backlog page" placeholder="Page">
+                  <button type="submit" :disabled="windowLoading">Go</button>
+                </form>
+                <button type="button" :disabled="page >= pageCount - 1 || windowLoading" @click="goToPage(page + 1)" aria-label="Next backlog page">Next</button>
               </div>
             </div>
           </section>
@@ -1335,6 +1393,11 @@
                   <span v-else>Approve</span>
                   <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8 8 2M3 2h5v5"/></svg>
                 </button>
+                <button class="pill pill-reject" :disabled="!canReject" @click="reject">
+                  <span v-if="activeItem && activeItem.status === 'skipped'">Rejected</span>
+                  <span v-else>Reject</span>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 2l6 6M8 2 2 8"/></svg>
+                </button>
               </div>
             </div>
           </div>
@@ -1399,6 +1462,12 @@ createApp({
     activeId: null,
     job: null, sel: null, cand: 0, retypeText: "", toast: "",
     page: 0, pageSize: 5,
+    preloadPages: 10, windowSize: 50, jumpPage: "",
+    total: 0, totalPages: 1,
+    firstPendingOffset: null, firstPendingPage: null, latestId: 0,
+    windowStartPage: 0, windowStartOffset: 0, windowLoading: false,
+    requestingBatch: false, polling: false, pollTimer: null, pollInterval: 5000,
+    selectionHandler: null, visibilityHandler: null,
     history: [], future: [],
   }),
   computed: {
@@ -1406,13 +1475,24 @@ createApp({
       return this.queue.find(i => i.id === this.activeId);
     },
     pageCount() {
-      return Math.max(1, Math.ceil(this.queue.length / this.pageSize));
+      return Math.max(1, this.totalPages);
     },
     pageStart() {
       return this.page * this.pageSize;
     },
+    rangeEnd() {
+      return Math.min(this.pageStart + this.pageSize, this.total);
+    },
+    carriedItems() {
+      return this.queue.filter(i =>
+        i.carried && i.status !== "approved" && i.status !== "skipped");
+    },
+    windowItems() {
+      return this.queue.filter(i => !i.carried);
+    },
     pagedQueue() {
-      return this.queue.slice(this.pageStart, this.pageStart + this.pageSize);
+      const start = Math.max(0, this.page - this.windowStartPage) * this.pageSize;
+      return [...this.carriedItems, ...this.windowItems.slice(start, start + this.pageSize)];
     },
     current() {
       const u = this.sel === null ? null : this.job && this.job.underlines[this.sel];
@@ -1425,11 +1505,7 @@ createApp({
       };
     },
     tagsLeft() {
-      return this.queue.reduce((sum, item) => {
-        if (item.status === "approved" || item.status === "skipped") return sum;
-        const j = (item.id === this.activeId) ? this.job : item.job;
-        return sum + (j ? j.underlines.length : 0);
-      }, 0);
+      return pendingTagCount(this.queue);
     },
     docTagsLeft() {
       return this.job ? this.job.underlines.length : 0;
@@ -1460,6 +1536,11 @@ createApp({
     },
     canApprove() {
       return !!this.activeItem && !!this.job;
+    },
+    canReject() {
+      return !!this.activeItem && !!this.job
+        && this.activeItem.status !== "approved"
+        && this.activeItem.status !== "skipped";
     }
   },
   methods: {
@@ -1467,15 +1548,19 @@ createApp({
     kindOf(t) { return typePrefix(t); },
     displayEl() { return document.getElementById("text-display"); },
     itemJob(item) {
-      return (item.id === this.activeId) ? this.job : item.job;
+      const job = (item.id === this.activeId) ? this.job : item.job;
+      return job || { text: item.text || "", underlines: [] };
     },
     tagCount(item) {
-      const j = this.itemJob(item);
-      return j ? j.underlines.length : 0;
+      const count = Number(item.tag_count);
+      return Number.isFinite(count) && count > 0 ? count : 0;
     },
     statusLabel(s) {
       const map = { queued: "Queued", reviewing: "In review", approved: "Approved", skipped: "Skipped" };
       return map[s] || s;
+    },
+    formatScore(score) {
+      return formatProbability(score);
     },
     renderDisplay() {
       const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -1568,7 +1653,12 @@ createApp({
         else if (k === "y") { ev.preventDefault(); this.redo(); }
       }
     },
+    markDirty() {
+      const item = this.activeItem;
+      if (item) item.dirty = true;
+    },
     pushHistory(caret) {
+      this.markDirty();
       this.history.push({
         text: this.job.text,
         underlines: this.job.underlines.map((u) => ({ ...u })),
@@ -1579,6 +1669,7 @@ createApp({
     },
     undo() {
       if (!this.history.length) return;
+      this.markDirty();
       this.future.push({
         text: this.job.text,
         underlines: this.job.underlines.map((u) => ({ ...u })),
@@ -1592,6 +1683,7 @@ createApp({
     },
     redo() {
       if (!this.future.length) return;
+      this.markDirty();
       this.history.push({
         text: this.job.text,
         underlines: this.job.underlines.map((u) => ({ ...u })),
@@ -1729,7 +1821,86 @@ createApp({
       item.cand = this.cand;
       item.retypeText = this.retypeText;
     },
-    loadItem(item) {
+    clearEditor() {
+      this.activeId = null;
+      this.job = null;
+      this.sel = null;
+      this.cand = 0;
+      this.retypeText = "";
+      this.history = [];
+      this.future = [];
+      this.renderDisplay();
+    },
+    applyPaginationMeta(data) {
+      this.total = Number(data.total) || 0;
+      this.totalPages = Math.max(1, Number(data.total_pages) || 1);
+      this.firstPendingOffset = data.first_pending_offset ?? null;
+      this.firstPendingPage = data.first_pending_page ?? null;
+      this.latestId = data.latest_id ?? 0;
+    },
+    async loadWindow(targetPage, options = {}) {
+      if (this.windowLoading) return;
+      this.windowLoading = true;
+      this.saveActive();
+
+      const lastPage = Math.max(0, this.totalPages - 1);
+      const page = Math.max(0, Math.min(Number(targetPage) || 0, lastPage));
+      const offset = page * this.pageSize;
+
+      try {
+        const res = await fetch(
+          "/api/jobs?offset=" + offset + "&limit=" + this.windowSize,
+          { cache: "no-store" }
+        );
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+
+        this.applyPaginationMeta(data);
+        this.windowStartPage = page;
+        this.windowStartOffset = Number(data.offset) || offset;
+        this.page = page;
+        this.queue = mergeWindowJobs(this.queue, data.jobs || [], this.windowStartOffset);
+
+        if (this.activeId && !this.queue.some(item => item.id === this.activeId)) {
+          this.clearEditor();
+        }
+
+        if (options.openFirst) {
+          const first = this.queue.find(item => item.status === "queued");
+          if (first) await this.loadItem(first);
+        }
+
+        this.$nextTick(() => this.renderDisplay());
+      } catch (e) {
+        console.error("failed to load window", e);
+        this.toast = "failed to load backlog: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
+      } finally {
+        this.windowLoading = false;
+      }
+    },
+    async loadInitial() {
+      const res = await fetch("/api/jobs?limit=0", { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const data = await res.json();
+      this.applyPaginationMeta(data);
+      const page = Number.isInteger(data.first_pending_page) ? data.first_pending_page : 0;
+      await this.loadWindow(page, { openFirst: true });
+    },
+    async refreshScore(item) {
+      try {
+        const res = await fetch("/api/score/" + encodeURIComponent(item.id), { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (this.activeId !== item.id) return;
+        if (typeof data.score === "number" && Number.isFinite(data.score)) {
+          item.score = data.score;
+        }
+      } catch (e) {
+        console.warn("score refresh failed", e);
+      }
+    },
+    async loadItem(item) {
       this.saveActive();
 
       const previous = this.activeItem;
@@ -1738,18 +1909,46 @@ createApp({
       }
 
       this.activeId = item.id;
-      const activeIndex = this.queue.findIndex(i => i.id === item.id);
-      if (activeIndex !== -1) this.page = Math.floor(activeIndex / this.pageSize);
-      this.job = item.job ? { ...item.job, underlines: item.job.underlines.map(u => ({ ...u })) } : null;
+      this.refreshScore(item);
+      if (!item.carried && item.ordinal) {
+        this.page = Math.floor((item.ordinal - 1) / this.pageSize);
+      }
+
+      if (item.status === "queued") {
+        item.status = "reviewing";
+      }
+
+      if (!item.job) {
+        this.job = null;
+        this.sel = null;
+        this.history = [];
+        this.future = [];
+        this.cand = 0;
+        this.retypeText = "";
+        try {
+          const res = await fetch("/api/job/" + encodeURIComponent(item.id));
+          if (!res.ok) throw new Error("HTTP " + res.status);
+          const data = await res.json();
+          if (this.activeId !== item.id) return;
+          item.job = makeJob(data);
+        } catch (e) {
+          if (this.activeId === item.id) {
+            item.status = "queued";
+            this.toast = "failed to load item: " + e;
+            setTimeout(() => (this.toast = ""), 5000);
+          }
+          return;
+        }
+      }
+
+      if (this.activeId !== item.id) return;
+
+      this.job = { ...item.job, underlines: item.job.underlines.map(u => ({ ...u })) };
       this.history = item.history ? item.history.map(h => ({ ...h, underlines: h.underlines.map(u => ({ ...u })) })) : [];
       this.future = item.future ? item.future.map(f => ({ ...f, underlines: f.underlines.map(u => ({ ...u })) })) : [];
       this.sel = item.sel;
       this.cand = item.cand || 0;
       this.retypeText = item.retypeText || "";
-
-      if (item.status === "queued") {
-        item.status = "reviewing";
-      }
 
       this.$nextTick(() => {
         this.renderDisplay();
@@ -1759,32 +1958,60 @@ createApp({
         }
       });
     },
-    goToPage(n) {
-      this.page = Math.max(0, Math.min(n, this.pageCount - 1));
+    async jumpToPage() {
+      const target = pageFromInput(this.jumpPage, this.pageCount);
+      this.jumpPage = "";
+      if (target === null) return;
+      await this.goToPage(target);
+    },
+    async goToPage(n) {
+      if (this.windowLoading) return;
+      const target = Math.max(0, Math.min(n, this.pageCount - 1));
+      const loadedEnd = this.windowStartPage + Math.max(1, Math.ceil(this.windowItems.length / this.pageSize));
+      if (target >= this.windowStartPage && target < loadedEnd) {
+        this.page = target;
+        this.$nextTick(() => this.renderDisplay());
+        return;
+      }
+      await this.loadWindow(target);
     },
     openItem(item) {
       if (item.id === this.activeId) return;
-      if (item.status === "skipped") item.status = "queued";
       this.loadItem(item);
     },
-    skipItem(item) {
+    async skipItem(item) {
       if (item.status === "approved") return;
       const id = item.id;
       item.status = "skipped";
+      item.dirty = false;
 
-      fetch("/api/skip", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id }),
-      }).catch(e => console.error("skip log failed", e));
+      try {
+        await fetch("/api/skip", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+      } catch (e) {
+        console.error("skip log failed", e);
+      }
 
       if (this.activeId === id) {
-        this.advance();
+        await this.advance();
       }
     },
-    reopenItem(item) {
-      if (item.status !== "skipped" || item.id === this.activeId) return;
-      item.status = "queued";
-      this.loadItem(item);
+    async reopenItem(item) {
+      if (item.status !== "skipped") return;
+      try {
+        const res = await fetch("/api/reopen", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: item.id }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        item.status = "queued";
+        await this.loadItem(item);
+      } catch (e) {
+        this.toast = "failed to reopen: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
+      }
     },
     async unapproveItem(item) {
       if (item.status !== "approved") return;
@@ -1795,6 +2022,7 @@ createApp({
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
         item.status = "queued";
+        item.dirty = false;
         this.loadItem(item);
         this.toast = "unapproved · " + item.id;
         setTimeout(() => (this.toast = ""), 3000);
@@ -1803,7 +2031,84 @@ createApp({
         setTimeout(() => (this.toast = ""), 5000);
       }
     },
-    advance() {
+    schedulePoll() {
+      clearTimeout(this.pollTimer);
+      this.pollTimer = setTimeout(() => this.pollMetadata(), this.pollInterval);
+    },
+    async pollMetadata() {
+      if (this.polling || this.windowLoading || this.requestingBatch) {
+        this.schedulePoll();
+        return;
+      }
+      if (document.hidden) {
+        this.schedulePoll();
+        return;
+      }
+
+      this.polling = true;
+      try {
+        const res = await fetch("/api/jobs?limit=0", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const changed = Number(data.total) !== this.total
+          || (data.latest_id ?? 0) !== this.latestId;
+        this.applyPaginationMeta(data);
+        if (!changed) return;
+
+        if (this.activeItem) {
+          this.toast = "new items available";
+          setTimeout(() => (this.toast = ""), 3000);
+        } else if (this.firstPendingPage !== null) {
+          await this.loadInitial();
+        }
+      } catch (e) {
+        console.warn("metadata poll failed", e);
+      } finally {
+        this.polling = false;
+        this.schedulePoll();
+      }
+    },
+    async requestNextBatch() {
+      if (this.requestingBatch) return;
+      this.requestingBatch = true;
+      this.toast = "checking for new sentences…";
+      try {
+        await this.loadInitial();
+        if (this.activeItem) {
+          this.toast = "loaded new sentences";
+          setTimeout(() => (this.toast = ""), 3000);
+          return;
+        }
+
+        this.toast = "requesting next batch…";
+        const res = await fetch("/api/next-batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: "{}",
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+
+        if (data.pushed > 0) {
+          await this.loadInitial();
+          if (this.activeItem) {
+            this.toast = "loaded " + data.pushed + " new sentences";
+            setTimeout(() => (this.toast = ""), 3000);
+            return;
+          }
+        }
+
+        this.clearEditor();
+        this.toast = data.message || "no more sentences available";
+        setTimeout(() => (this.toast = ""), 5000);
+      } catch (e) {
+        this.toast = "failed to fetch next batch: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
+      } finally {
+        this.requestingBatch = false;
+      }
+    },
+    async advance() {
       const currentIdx = this.queue.findIndex(i => i.id === this.activeId);
       let nextItem = null;
       if (currentIdx !== -1) {
@@ -1819,20 +2124,22 @@ createApp({
       }
 
       if (nextItem) {
-        this.loadItem(nextItem);
-      } else {
-        // All done or skipped
-        this.activeId = null;
-        this.job = null;
-        this.history = [];
-        this.future = [];
-        this.sel = null;
-        this.cand = 0;
-        this.retypeText = "";
-        this.renderDisplay();
-        this.toast = "backlog cleared";
-        setTimeout(() => (this.toast = ""), 3000);
+        await this.loadItem(nextItem);
+        return;
       }
+
+      const nextWindowPage = this.windowStartPage
+        + Math.max(1, Math.ceil(this.windowItems.length / this.pageSize));
+      if (nextWindowPage < this.totalPages) {
+        await this.loadWindow(nextWindowPage);
+        const queued = this.queue.find(i => i.status === "queued");
+        if (queued) {
+          await this.loadItem(queued);
+          return;
+        }
+      }
+
+      await this.requestNextBatch();
     },
     async approve() {
       if (!this.canApprove) return;
@@ -1840,11 +2147,13 @@ createApp({
       const finalText = approve(this.job);
       this.saveActive();
       try {
-        await fetch("/api/result", {
+        const res = await fetch("/api/result", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: item.id, text: finalText }),
         });
+        if (!res.ok) throw new Error("HTTP " + res.status);
         item.status = "approved";
+        item.dirty = false;
         this.toast = "approved · " + item.id;
         setTimeout(() => (this.toast = ""), 3000);
         this.advance();
@@ -1853,30 +2162,49 @@ createApp({
         setTimeout(() => (this.toast = ""), 5000);
       }
     },
+    async reject() {
+      if (!this.canReject) return;
+      await this.skipItem(this.activeItem);
+    },
   },
     async mounted() {
       window.__tt = this;
-      document.addEventListener("selectionchange", this.onSelectionChange.bind(this));
+      this.selectionHandler = this.onSelectionChange.bind(this);
+      this.visibilityHandler = () => {
+        if (!document.hidden) this.pollMetadata();
+      };
+      document.addEventListener("selectionchange", this.selectionHandler);
+      document.addEventListener("visibilitychange", this.visibilityHandler);
       try {
-        const data = await (await fetch("/api/jobs")).json();
-        this.queue = data.jobs.map((raw, i) => ({
-          id: raw.id,
-          job: makeJob(raw),
-          status: i === 0 ? "reviewing" : "queued",
-          history: [],
-          future: [],
-          sel: null,
-          cand: 0,
-          retypeText: "",
-        }));
-        if (this.queue.length) {
-          this.loadItem(this.queue[0]);
+        const res = await fetch("/api/ui-config", { cache: "no-store" });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const config = await res.json();
+        if (Number.isInteger(config.page_size) && config.page_size > 0) {
+          this.pageSize = config.page_size;
         }
+        if (Number.isInteger(config.preload_pages) && config.preload_pages > 0) {
+          this.preloadPages = config.preload_pages;
+        }
+        if (Number.isInteger(config.window_size) && config.window_size > 0) {
+          this.windowSize = config.window_size;
+        }
+        await this.loadInitial();
       } catch (e) {
-        console.error("failed to load backlog", e);
-        this.toast = "failed to load backlog";
+        console.error("failed to load pagination config", e);
+        this.toast = "failed to load backlog: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
       }
+      this.schedulePoll();
       this.$nextTick(() => this.renderDisplay());
+    },
+    unmounted() {
+      clearTimeout(this.pollTimer);
+      if (this.selectionHandler) {
+        document.removeEventListener("selectionchange", this.selectionHandler);
+      }
+      if (this.visibilityHandler) {
+        document.removeEventListener("visibilitychange", this.visibilityHandler);
+      }
     },
 
 }).mount("#app");

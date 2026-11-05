@@ -94,6 +94,80 @@ function approve(job) {
   return job.text;
 }
 
+function makeQueueItem(raw, ordinal) {
+  return {
+    id: raw.id,
+    text: raw.text || "",
+    job: null,
+    status: raw.status || "queued",
+    history: [],
+    future: [],
+    sel: null,
+    cand: 0,
+    retypeText: "",
+    score: typeof raw.score === "number" ? raw.score : null,
+    tag_count: typeof raw.tag_count === "number" ? raw.tag_count : 0,
+    ordinal,
+    dirty: false,
+    carried: false,
+  };
+}
+
+function formatProbability(score) {
+  if (typeof score !== "number" || !Number.isFinite(score)) return "—";
+  const percent = Math.max(0, Math.min(100, Math.round(score * 100)));
+  return percent + "%";
+}
+
+function pendingTagCount(items) {
+  return (items || []).reduce((sum, item) => {
+    if (item.status === "approved" || item.status === "skipped") return sum;
+    const count = Number(item.tag_count);
+    return sum + (Number.isFinite(count) && count > 0 ? count : 0);
+  }, 0);
+}
+
+function pageFromInput(value, totalPages) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return null;
+  const page = Math.trunc(n);
+  if (page < 1) return 0;
+  return Math.min(page - 1, Math.max(0, totalPages - 1));
+}
+
+function mergeWindowJobs(existing, incoming, offset) {
+  const carried = [];
+  const seen = new Set();
+  existing.forEach((item) => {
+    if (!item.dirty || item.status === "approved" || item.status === "skipped") return;
+    if (seen.has(item.id)) return;
+    seen.add(item.id);
+    carried.push({ ...item, carried: true });
+  });
+
+  const fresh = [];
+  (incoming || []).forEach((raw, index) => {
+    if (seen.has(raw.id)) return;
+    seen.add(raw.id);
+    fresh.push(makeQueueItem(raw, offset + index + 1));
+  });
+  return [...carried, ...fresh];
+}
+
 if (typeof module !== "undefined") {
-  module.exports = { makeJob, piecesOf, replaceSegment, drop, approve, applyDiffToUnderlines };
+  module.exports = {
+    makeJob,
+    piecesOf,
+    replaceSegment,
+    drop,
+    approve,
+    applyDiffToUnderlines,
+    makeQueueItem,
+    mergeWindowJobs,
+    pageFromInput,
+    pendingTagCount,
+    formatProbability,
+  };
 }

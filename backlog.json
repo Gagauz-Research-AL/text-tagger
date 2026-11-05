@@ -1,0 +1,23 @@
+{
+  "job-101": {
+    "id": "job-101",
+    "text": "The quick brown fox jumps over the lazy dog",
+    "status": "approved",
+    "version": 2,
+    "updated_at": "2026-11-05T17:13:35.572731"
+  },
+  "job-201": {
+    "id": "job-201",
+    "text": "Testing the proxy persistence",
+    "status": "queued",
+    "version": 1,
+    "updated_at": "2026-11-05T17:14:55.197649"
+  },
+  "job-202": {
+    "id": "job-202",
+    "text": "Ensuring it works across restarts",
+    "status": "queued",
+    "version": 1,
+    "updated_at": "2026-11-05T17:14:55.197656"
+  }
+}
