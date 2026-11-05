@@ -40,7 +40,26 @@ def generate_mock_jobs():
             0: ("their", ["they're", "there"], "grammatical error"),
             2: ("too", ["to"], "phrasing"),
             8: ("whether", ["weather"], "weird spelling"),
-        })
+        }),
+        _build_job("txt-003", "he dont know weather to stay or leave, but its probaly fine", {
+            1: ("dont", ["doesn't"], "grammatical error"),
+            3: ("weather", ["whether"], "grammatical error"),
+            9: ("its", ["it's"], "grammatical error"),
+            10: ("probaly", ["probably"], "weird spelling"),
+        }),
+        _build_job("txt-004", "we was going too start early, althou the traffic was terrible", {
+            1: ("was", ["were"], "grammatical error"),
+            3: ("too", ["to"], "phrasing"),
+            6: ("althou", ["although"], "weird spelling"),
+        }),
+        _build_job("txt-005", "she have a beautifull garden with roses and tulips", {
+            1: ("have", ["has"], "grammatical error"),
+            3: ("beautifull", ["beautiful"], "weird spelling"),
+        }),
+        _build_job("txt-006", "the report was definately ready, but we recieved it late", {
+            3: ("definately", ["definitely"], "weird spelling"),
+            7: ("recieved", ["received"], "weird spelling"),
+        }),
     ]
 
 def generate_mock():

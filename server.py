@@ -6,7 +6,8 @@ Routes:
     GET  /static/...    vendored assets (vue, logic.js)
     GET  /api/job       the mock job (external JSON format)
     GET  /api/jobs      the mock job backlog
-    POST /api/result    prints the approved final text to the console
+    POST /api/result    saves the approved final text and prints it
+    POST /api/unapprove invalidates an approved entry
     POST /api/skip      prints the skipped job ID to the console
 """
 
@@ -19,6 +20,8 @@ from mock_data import generate_mock, generate_mock_jobs
 from tagger import approve
 
 ROOT = Path(__file__).parent / "static"
+APPROVED = {}
+APPROVED_LOCK = threading.Lock()
 
 TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -64,9 +67,18 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/result":
             job_id = raw.get("id", "unknown")
+            final_text = approve({"text": str(raw.get("text", "")), "underlines": []})
+            with APPROVED_LOCK:
+                APPROVED[job_id] = final_text
             print(f"\n--- FINAL TEXT [{job_id}] ---")
-            print(approve({"text": str(raw.get("text", "")), "underlines": []}), flush=True)
+            print(final_text, flush=True)
             self._json(200, {"status": "saved", "id": job_id})
+        elif path == "/api/unapprove":
+            job_id = raw.get("id", "unknown")
+            with APPROVED_LOCK:
+                removed = APPROVED.pop(job_id, None) is not None
+            print(f"\n--- UNAPPROVED [{job_id}] ---", flush=True)
+            self._json(200, {"status": "unapproved", "id": job_id, "removed": removed})
         elif path == "/api/skip":
             job_id = raw.get("id", "unknown")
             print(f"\n--- SKIPPED [{job_id}] ---", flush=True)

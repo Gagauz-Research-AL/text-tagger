@@ -7,9 +7,12 @@ from tagger import load_job
 
 
 class MockDataTest(unittest.TestCase):
-    def test_backlog_has_two_stable_jobs(self):
+    def test_backlog_has_six_stable_jobs(self):
         jobs = generate_mock_jobs()
-        self.assertEqual([j["id"] for j in jobs], ["txt-001", "txt-002"])
+        self.assertEqual(
+            [j["id"] for j in jobs],
+            ["txt-001", "txt-002", "txt-003", "txt-004", "txt-005", "txt-006"],
+        )
 
     def test_generate_mock_is_compatibility_alias(self):
         self.assertEqual(generate_mock()["id"], "txt-001")
@@ -18,6 +21,10 @@ class MockDataTest(unittest.TestCase):
         expected = {
             "txt-001": ["sitted", "the", "mat", "barked", "mailman"],
             "txt-002": ["their", "too", "whether"],
+            "txt-003": ["dont", "weather", "its", "probaly"],
+            "txt-004": ["was", "too", "althou"],
+            "txt-005": ["have", "beautifull"],
+            "txt-006": ["definately", "recieved"],
         }
         for raw in generate_mock_jobs():
             job = load_job(raw)

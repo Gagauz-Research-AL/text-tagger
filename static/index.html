@@ -152,8 +152,7 @@
   }
   .nav a:hover, .nav a.active { color: var(--ink); }
   .nav a:hover::after, .nav a.active::after { transform: scaleX(1); }
-  .top-actions { justify-self: end; display: flex; align-items: center; gap: 20px; }
-  .top-meta {
+  .review-meta {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -272,7 +271,7 @@
     letter-spacing: 0.19em;
     text-transform: uppercase;
   }
-  .spark { width: 14px; height: 14px; flex: none; fill: currentColor; }
+  .glyph { width: 14px; height: 14px; flex: none; }
   .hero-stage {
     position: relative;
     display: grid;
@@ -324,7 +323,7 @@
     opacity: 0.45;
     pointer-events: none;
   }
-  .hero-visual > .spark {
+  .hero-visual > .glyph {
     position: absolute;
     top: 8px;
     right: 4px;
@@ -503,7 +502,7 @@
   .backlog-list { list-style: none; margin: 0; padding: 0; }
   .backlog-item {
     display: grid;
-    grid-template-columns: 32px minmax(0, 1fr) 64px 94px auto;
+    grid-template-columns: 32px minmax(0, 1fr) 64px 94px 64px;
     gap: 14px;
     align-items: center;
     padding: 12px 24px;
@@ -530,7 +529,8 @@
     transition: opacity 0.15s ease;
   }
   .backlog-open:hover { opacity: 0.7; }
-  .backlog-open:disabled { color: var(--muted); cursor: default; }
+  .backlog-item.approved .backlog-open { color: var(--muted); }
+  .backlog-item.approved .backlog-open:hover { opacity: 1; color: var(--ink); }
   .backlog-meta {
     color: rgba(33, 33, 33, 0.45);
     font-size: 8.5px; font-weight: 500;
@@ -561,13 +561,48 @@
   }
   .queue-action:hover { color: var(--ink); }
   .queue-action.skip-action:hover { color: var(--bad); }
+  .queue-action.unapprove-action:hover { color: var(--warn); }
+  .backlog-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    border-top: 1px solid rgba(33, 33, 33, 0.08);
+    color: rgba(33, 33, 33, 0.45);
+    font-size: 8.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+  .backlog-pager {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .backlog-pager button {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(33, 33, 33, 0.54);
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    cursor: pointer;
+    transition: color 0.15s ease, opacity 0.15s ease;
+  }
+  .backlog-pager button:disabled { opacity: 0.28; cursor: default; }
+  .backlog-pager button:not(:disabled):hover { color: var(--ink); }
+  .backlog-page { color: var(--ink); }
   .workspace-grid {
-
     display: grid;
     grid-template-columns: minmax(0, 1fr) 396px;
+    grid-template-rows: clamp(520px, 68vh, 760px);
     gap: 16px;
     align-items: stretch;
   }
+
 
   .editor-card {
     display: flex;
@@ -611,6 +646,8 @@
     font-weight: 400;
     line-height: 1.95;
     letter-spacing: -0.026em;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
     outline: none;
     caret-color: var(--ink);
   }
@@ -634,6 +671,7 @@
     border-radius: 8px;
     background: var(--ink);
     color: #ffffff;
+    caret-color: #ffffff;
     box-shadow: 0 7px 18px -10px rgba(0, 0, 0, 0.55);
   }
   .card-foot {
@@ -660,6 +698,22 @@
     color: rgba(33, 33, 33, 0.62);
     font: 500 8.5px/1 var(--sans);
   }
+
+  .aside-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+  }
+  .aside-stack > aside { flex: 1 1 auto; }
+  .review-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 2px;
+  }
+  .review-actions .pill { padding: 12px 22px; }
 
   aside {
     display: flex;
@@ -931,7 +985,7 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
-  .foot-bottom .spark { width: 15px; height: 15px; color: var(--ink); }
+  .foot-bottom .glyph { width: 15px; height: 15px; color: var(--ink); }
 
   .toast {
     position: fixed;
@@ -959,7 +1013,7 @@
       height: 300px;
       opacity: 0.34;
     }
-    .workspace-grid { grid-template-columns: 1fr; }
+    .workspace-grid { grid-template-columns: 1fr; grid-template-rows: auto; }
     .editor-card { height: clamp(480px, 62vh, 680px); }
     aside { height: auto; max-height: none; overflow: visible; }
     .foot-top { grid-template-columns: 1fr 1fr; gap: 34px; }
@@ -997,8 +1051,9 @@
     .workspace-label { padding: 0 16px 11px; }
     .footer-panel { padding: 32px 30px 18px; }
     .backlog-head { padding: 13px 18px; }
+    .backlog-foot { padding: 11px 18px; }
     .backlog-item {
-      grid-template-columns: 28px minmax(0, 1fr) auto;
+      grid-template-columns: 28px minmax(0, 1fr) 88px;
       padding: 12px 18px;
     }
     .backlog-meta { grid-column: 2; grid-row: 2; padding-top: 4px; }
@@ -1014,8 +1069,8 @@
     .brand svg { width: 23px; height: 23px; }
     .brand-words b { font-size: 10px; }
     .brand-words span { font-size: 6.5px; }
-    .top-meta { display: none; }
-    .top-actions { gap: 8px; }
+    .review-meta { font-size: 8px; letter-spacing: 0.1em; }
+    .review-actions .pill { padding: 10px 16px; }
     .pill { padding: 10px 14px; font-size: 10px; }
     .pill-dark { padding: 10px 15px; }
     .hero { padding: 26px 18px 0; }
@@ -1050,11 +1105,13 @@
     .foot-list { margin-top: 8px; }
     .foot-block-head { min-height: auto; }
     .foot-bottom { flex-wrap: wrap; gap: 8px 16px; font-size: 7px; }
-    .foot-bottom .spark { display: none; }
+    .foot-bottom .glyph { display: none; }
     .backlog-head { padding: 12px 16px; }
+    .backlog-foot { padding: 11px 16px; gap: 10px; }
+    .backlog-pager { gap: 10px; }
     .backlog-summary { font-size: 7.5px; letter-spacing: 0.08em; }
     .backlog-item {
-      grid-template-columns: 1fr auto;
+      grid-template-columns: minmax(0, 1fr) 88px;
       padding: 12px 16px;
     }
     .backlog-num { display: none; }
@@ -1078,6 +1135,15 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="mark-editorial" viewBox="0 0 24 24">
+      <rect x="3" y="6" width="18" height="12" rx="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <circle cx="7.2" cy="12" r="1.5" fill="currentColor"/>
+      <path d="M10.8 9.8h7.1M10.8 14.2h4.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
 <div id="app">
   <div class="panel app-panel">
     <div class="site">
@@ -1095,15 +1161,6 @@
           <a href="#segments">Segments</a>
           <a href="#guide">Guide</a>
         </nav>
-        <div class="top-actions">
-          <span class="top-meta" v-if="job"><i class="status-dot"></i>{{ pad(tagsLeft) }} tags left</span>
-          <button class="pill pill-dark" :disabled="!canApprove" @click="approve">
-            <span v-if="!queue.length">Loading</span>
-            <span v-else-if="allDone">Done</span>
-            <span v-else>Approve</span>
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8 8 2M3 2h5v5"/></svg>
-          </button>
-        </div>
       </header>
 
       <main>
@@ -1118,12 +1175,12 @@
           <div class="hero-inner">
             <div class="hero-copy">
               <p class="eyebrow">
-                <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+                <svg class="glyph" aria-hidden="true"><use href="#mark-editorial"/></svg>
                 Text refinement studio
               </p>
               <div class="hero-stage">
                 <div class="hero-visual" aria-hidden="true">
-                  <svg class="spark" viewBox="0 0 24 24"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+                  <svg class="glyph" aria-hidden="true"><use href="#mark-editorial"/></svg>
                   <span class="orbit orbit-a"></span>
                   <span class="orbit orbit-b"></span>
                   <div class="tagi">
@@ -1150,19 +1207,19 @@
         </section>
 
         <section class="workspace" id="editor">
-          <div class="workspace-label"><span>Workspace</span><span>Human review / v1.0</span></div>
+          <div class="workspace-label"><span>02 &mdash; Workspace</span><span>Human review / v1.0</span></div>
 
           <section class="backlog" aria-labelledby="backlog-title">
             <div class="backlog-head">
-              <h2 class="label" id="backlog-title">Backlog</h2>
+              <h2 class="label" id="backlog-title">201 &mdash; Backlog</h2>
               <span class="backlog-summary">{{pad(pendingCount)}} items <span class="sep">&middot;</span> {{pad(tagsLeft)}} tags left</span>
             </div>
             <ul class="backlog-list">
-              <li v-for="(item, i) in queue" :key="item.id"
+              <li v-for="(item, i) in pagedQueue" :key="item.id"
                   class="backlog-item"
                   :class="[item.status, { active: item.id === activeId }]">
-                <span class="backlog-num">{{pad(i + 1)}}</span>
-                <button class="backlog-open" @click="openItem(item)" :disabled="item.status === 'approved'">
+                <span class="backlog-num">{{pad(pageStart + i + 1)}}</span>
+                <button class="backlog-open" @click="openItem(item)">
                   {{ itemJob(item).text }}
                 </button>
                 <span class="backlog-meta">{{pad(tagCount(item))}} tags</span>
@@ -1170,24 +1227,33 @@
                   <i></i>{{ statusLabel(item.status) }}
                 </span>
                 <div class="backlog-actions">
-                  <button v-if="item.status === 'skipped'" class="queue-action" @click="reopenItem(item)">Reopen</button>
-                  <button v-else-if="item.status !== 'approved'" class="queue-action skip-action" @click="skipItem(item)">Skip</button>
+                  <button v-if="item.status === 'approved'" class="queue-action unapprove-action" @click="unapproveItem(item)">Unapprove</button>
+                  <button v-else-if="item.status === 'skipped'" class="queue-action" @click="reopenItem(item)">Reopen</button>
+                  <button v-else class="queue-action skip-action" @click="skipItem(item)">Skip</button>
                 </div>
               </li>
             </ul>
+            <div class="backlog-foot" v-if="queue.length > pageSize">
+              <span class="backlog-range">{{ pad(pageStart + 1) }}&ndash;{{ pad(pageStart + pagedQueue.length) }} / {{ pad(queue.length) }}</span>
+              <div class="backlog-pager" aria-label="Backlog pagination">
+                <button type="button" :disabled="page === 0" @click="goToPage(page - 1)" aria-label="Previous backlog page">Prev</button>
+                <span class="backlog-page" aria-live="polite">{{ pad(page + 1) }} / {{ pad(pageCount) }}</span>
+                <button type="button" :disabled="page >= pageCount - 1" @click="goToPage(page + 1)" aria-label="Next backlog page">Next</button>
+              </div>
+            </div>
           </section>
 
           <div class="workspace-grid">
             <section class="editor-card" aria-label="Draft text">
               <div class="card-topline">
-                <span>01 &mdash; Draft</span>
+                <span>202 &mdash; Draft</span>
                 <span class="doc-meta">{{ pad(wordCount) }} words <span class="sep">&middot;</span> {{ pad(docTagsLeft) }} tags</span>
                 <span class="doc-extra">Click a tag to inspect</span>
               </div>
               <div class="editor-scroll">
-                <div id="text-display" :contenteditable="canApprove ? 'true' : 'false'" spellcheck="false"
-                     @input="onTextInput" @click="onTagClick" @blur="onTextBlur"
-                     @keydown.enter.prevent="onEnter" @keydown="handleKeydown"></div>
+                <div id="text-display" :contenteditable="canEdit ? 'true' : 'false'" spellcheck="false"
+                     @input="onTextInput" @click="onTagClick"
+                     @keydown.enter="onEnter" @keydown="handleKeydown"></div>
               </div>
               <div class="card-foot">
                 <span>Click a tag, then type to replace it &mdash; other edits behave as before.</span>
@@ -1195,9 +1261,10 @@
               </div>
             </section>
 
-            <aside id="segments" aria-label="Segment details">
+            <div class="aside-stack">
+              <aside id="segments" aria-label="Segment details">
               <div class="panel-head">
-                <span class="label">02 &mdash; Segment</span>
+                <span class="label">203 &mdash; Segment</span>
                 <span class="panel-index" v-if="sel !== null">{{ pad(sel + 1) }} / {{ pad(docTagsLeft) }}</span>
                 <span class="panel-index" v-else>None</span>
               </div>
@@ -1260,8 +1327,25 @@
                 <button class="pill pill-dark" :disabled="!job" @click="startReview">Select first tag <span class="arrow">&rarr;</span></button>
               </div>
 
-              <p class="hint">Approve prints the final text on the server console and ends the session.</p>
-            </aside>
+              <p class="hint">Approve saves the final text to the server and moves to the next item.</p>
+              </aside>
+              <div class="review-actions">
+                <span class="review-meta">
+                  <i class="status-dot"></i>
+                  <span v-if="!queue.length">Loading</span>
+                  <span v-else-if="activeItem && activeItem.status === 'approved'">Approved &middot; editable</span>
+                  <span v-else-if="allDone">Backlog cleared</span>
+                  <span v-else>{{ pad(tagsLeft) }} tags left</span>
+                </span>
+                <button class="pill pill-dark" :disabled="!canApprove" @click="approve">
+                  <span v-if="!queue.length">Loading</span>
+                  <span v-else-if="!activeItem && allDone">Done</span>
+                  <span v-else-if="activeItem && activeItem.status === 'approved'">Re-approve</span>
+                  <span v-else>Approve</span>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.15" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 8 8 2M3 2h5v5"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       </main>
@@ -1299,7 +1383,7 @@
     </div>
     <div class="foot-bottom">
       <span>&copy; 2026 text-tagger</span>
-      <svg class="spark" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0c.55 6.85 5.15 11.45 12 12-6.85.55-11.45 5.15-12 12-.55-6.85-5.15-11.45-12-12C6.85 11.45 11.45 6.85 12 0Z"/></svg>
+      <svg class="glyph" aria-hidden="true"><use href="#mark-editorial"/></svg>
       <span>Human review, always</span>
     </div>
   </footer>
@@ -1315,7 +1399,7 @@ const normalizeText = (el) => {
   let t;
   try { t = el.innerText; } catch (e) { t = undefined; }
   if (typeof t !== "string") t = el.textContent || "";
-  return t.replace(/\r?\n/g, " ").trim();
+  return t.replace(/\r\n?/g, "\n");
 };
 
 createApp({
@@ -1323,12 +1407,21 @@ createApp({
     queue: [],
     activeId: null,
     job: null, sel: null, cand: 0, retypeText: "", toast: "",
-    inlineReplace: null, inlineArmed: false,
+    page: 0, pageSize: 5,
     history: [], future: [],
   }),
   computed: {
     activeItem() {
       return this.queue.find(i => i.id === this.activeId);
+    },
+    pageCount() {
+      return Math.max(1, Math.ceil(this.queue.length / this.pageSize));
+    },
+    pageStart() {
+      return this.page * this.pageSize;
+    },
+    pagedQueue() {
+      return this.queue.slice(this.pageStart, this.pageStart + this.pageSize);
     },
     current() {
       const u = this.sel === null ? null : this.job && this.job.underlines[this.sel];
@@ -1371,8 +1464,11 @@ createApp({
     allDone() {
       return this.queue.length > 0 && this.queue.every(i => i.status === "approved" || i.status === "skipped");
     },
+    canEdit() {
+      return !!this.job;
+    },
     canApprove() {
-      return this.activeItem && this.activeItem.status === "reviewing";
+      return !!this.activeItem && !!this.job;
     }
   },
   methods: {
@@ -1464,83 +1560,22 @@ createApp({
     updateJobFromDOM() {
       const newText = normalizeText(this.displayEl());
       if (!this.job || newText === this.job.text) return;
-      this.pushHistory(this.caretOffset());
+      const caret = this.caretOffset();
+      this.pushHistory(caret);
       const oldList = this.job.underlines.slice();
       const kept = applyDiffToUnderlines(this.job.text, newText, this.job.underlines);
       this.job = { text: newText, underlines: kept };
       this.refreshTags(oldList);
+      this.setCaretOffset(caret);
       this.syncSelectionWithCaret();
     },
     handleKeydown(ev) {
       const mod = ev.ctrlKey || ev.metaKey;
       if (mod) {
-        this.endInlineReplace();
-        this.inlineArmed = false;
         const k = ev.key.toLowerCase();
         if (k === "z") { ev.preventDefault(); if (ev.shiftKey) this.redo(); else this.undo(); }
         else if (k === "y") { ev.preventDefault(); this.redo(); }
-        return;
       }
-      if (this.inlineReplace) { this.handleInlineKeydown(ev); return; }
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Tab"].includes(ev.key)) {
-        this.inlineArmed = false;
-        return;
-      }
-      if (!ev.altKey && ev.key.length === 1 && this.inlineArmed && this.sel !== null) {
-        const off = this.caretOffset();
-        if (off !== null && this.spanAtCaret(off) === this.sel) {
-          ev.preventDefault();
-          this.pushHistory(off);
-          this.inlineReplace = { idx: this.sel, text: "" };
-          this.inlineArmed = false;
-          this.applyInlineText(ev.key);
-        }
-      }
-    },
-    handleInlineKeydown(ev) {
-      const r = this.inlineReplace;
-      if (!r) return;
-      if (ev.key === "Backspace") {
-        ev.preventDefault();
-        if (r.text.length > 1) this.applyInlineText(r.text.slice(0, -1));
-        return;
-      }
-      if (ev.key === "Delete") { ev.preventDefault(); return; }
-      if (!ev.altKey && !ev.ctrlKey && !ev.metaKey && ev.key.length === 1) {
-        ev.preventDefault();
-        this.applyInlineText(r.text + ev.key);
-        return;
-      }
-      if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown", "Tab"].includes(ev.key)) {
-        this.endInlineReplace();
-        this.inlineArmed = false;
-        return;
-      }
-      if (ev.key === "Escape") {
-        ev.preventDefault();
-        this.endInlineReplace();
-        this.inlineArmed = false;
-        return;
-      }
-      if (ev.key === "Enter") {
-        this.endInlineReplace();
-        this.inlineArmed = false;
-      }
-    },
-    endInlineReplace() {
-      this.inlineReplace = null;
-    },
-    applyInlineText(text) {
-      const r = this.inlineReplace;
-      if (!r || !this.job) return;
-      const u = this.job.underlines[r.idx];
-      if (!u) { this.endInlineReplace(); return; }
-      replaceSegment(this.job, r.idx, text);
-      r.text = text;
-      const node = this.displayEl().querySelector('.tag[data-i="' + r.idx + '"]');
-      if (node) node.textContent = text;
-      this.setCaretOffset(u.left_pos + text.length);
-      this.styleSelected();
     },
     pushHistory(caret) {
       this.history.push({
@@ -1600,23 +1635,33 @@ createApp({
     },
     onTagClick(ev) {
       const t = ev.target.closest(".tag");
-      this.endInlineReplace();
       if (t) {
         this.select(+t.dataset.i);
-        this.inlineArmed = true;
       } else {
-        this.inlineArmed = false;
         this.syncSelectionWithCaret();
       }
     },
     onEnter(ev) {
-      this.endInlineReplace();
-      this.inlineArmed = false;
-      ev.target.blur();
-    },
-    onTextBlur() {
-      this.endInlineReplace();
-      this.inlineArmed = false;
+      if (ev.isComposing) return;
+      ev.preventDefault();
+      const display = this.displayEl();
+      const sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      const range = sel.getRangeAt(0);
+      if (!display.contains(range.startContainer)) return;
+      const off = this.caretOffset();
+      if (off === null) return;
+      range.deleteContents();
+      const line = document.createTextNode("\n");
+      range.insertNode(line);
+      range.setStart(line, 1);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      this.updateJobFromDOM();
+      this.renderDisplay();
+      this.setCaretOffset(off + 1);
+      this.syncSelectionWithCaret();
     },
     select(i) { this.sel = i; this.cand = 0; this.retypeText = ""; this.styleSelected(); },
     onTextInput(ev) {
@@ -1695,8 +1740,6 @@ createApp({
     },
     loadItem(item) {
       this.saveActive();
-      this.endInlineReplace();
-      this.inlineArmed = false;
 
       const previous = this.activeItem;
       if (previous && previous.status === "reviewing") {
@@ -1704,6 +1747,8 @@ createApp({
       }
 
       this.activeId = item.id;
+      const activeIndex = this.queue.findIndex(i => i.id === item.id);
+      if (activeIndex !== -1) this.page = Math.floor(activeIndex / this.pageSize);
       this.job = item.job ? { ...item.job, underlines: item.job.underlines.map(u => ({ ...u })) } : null;
       this.history = item.history ? item.history.map(h => ({ ...h, underlines: h.underlines.map(u => ({ ...u })) })) : [];
       this.future = item.future ? item.future.map(f => ({ ...f, underlines: f.underlines.map(u => ({ ...u })) })) : [];
@@ -1723,8 +1768,10 @@ createApp({
         }
       });
     },
+    goToPage(n) {
+      this.page = Math.max(0, Math.min(n, this.pageCount - 1));
+    },
     openItem(item) {
-      if (item.status === "approved") return;
       if (item.id === this.activeId) return;
       if (item.status === "skipped") item.status = "queued";
       this.loadItem(item);
@@ -1744,8 +1791,26 @@ createApp({
       }
     },
     reopenItem(item) {
+      if (item.status !== "skipped" || item.id === this.activeId) return;
       item.status = "queued";
-      this.openItem(item);
+      this.loadItem(item);
+    },
+    async unapproveItem(item) {
+      if (item.status !== "approved") return;
+      try {
+        const res = await fetch("/api/unapprove", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: item.id }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        item.status = "queued";
+        this.loadItem(item);
+        this.toast = "unapproved · " + item.id;
+        setTimeout(() => (this.toast = ""), 3000);
+      } catch (e) {
+        this.toast = "failed to unapprove: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
+      }
     },
     advance() {
       const currentIdx = this.queue.findIndex(i => i.id === this.activeId);
@@ -1773,8 +1838,6 @@ createApp({
         this.sel = null;
         this.cand = 0;
         this.retypeText = "";
-        this.endInlineReplace();
-        this.inlineArmed = false;
         this.renderDisplay();
         this.toast = "backlog cleared";
         setTimeout(() => (this.toast = ""), 3000);
@@ -1784,6 +1847,7 @@ createApp({
       if (!this.canApprove) return;
       const item = this.activeItem;
       const finalText = approve(this.job);
+      this.saveActive();
       try {
         await fetch("/api/result", {
           method: "POST", headers: { "Content-Type": "application/json" },
