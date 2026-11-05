@@ -709,7 +709,7 @@
   .review-actions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 16px;
     padding: 0 2px;
   }
@@ -1292,8 +1292,8 @@
 
                 <div v-if="cand !== null && current.candidates.length" class="preview-card">
                   <div class="preview-row">
-                    <span class="preview-label">Original</span>
-                    <span class="preview-text original">{{ current.text }}</span>
+                     <span class="preview-label">Original</span>
+                     <span class="preview-text original">{{ current.original }}</span>
                   </div>
                   <div class="preview-row">
                     <span class="preview-label">Proposed</span>
@@ -1302,8 +1302,6 @@
                 </div>
 
                 <div class="controls" v-if="current.candidates.length">
-                  <button class="circle-btn" @click="cycle(-1)" aria-label="Previous candidate">&larr;</button>
-                  <button class="circle-btn" @click="cycle(1)" aria-label="Next candidate">&rarr;</button>
                   <button class="pill pill-dark apply-btn" @click="applyCandidate">Apply <span class="arrow">&rarr;</span></button>
                 </div>
                 <p v-else class="muted small">No candidates for this span &mdash; fix it by hand below.</p>
@@ -1330,13 +1328,6 @@
               <p class="hint">Approve saves the final text to the server and moves to the next item.</p>
               </aside>
               <div class="review-actions">
-                <span class="review-meta">
-                  <i class="status-dot"></i>
-                  <span v-if="!queue.length">Loading</span>
-                  <span v-else-if="activeItem && activeItem.status === 'approved'">Approved &middot; editable</span>
-                  <span v-else-if="allDone">Backlog cleared</span>
-                  <span v-else>{{ pad(tagsLeft) }} tags left</span>
-                </span>
                 <button class="pill pill-dark" :disabled="!canApprove" @click="approve">
                   <span v-if="!queue.length">Loading</span>
                   <span v-else-if="!activeItem && allDone">Done</span>
