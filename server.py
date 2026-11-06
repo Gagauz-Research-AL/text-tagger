@@ -21,7 +21,10 @@ logging.basicConfig(
 logger = logging.getLogger("proxy")
 
 ROOT = Path(__file__).parent / "static"
-RANKER_SERVER_URL = "http://host.docker.internal:9090"
+RANKER_SERVER_URL = os.environ.get(
+    "RANKER_SERVER_URL",
+    "http://host.docker.internal:9090",
+).rstrip("/")
 PROJECT_ID = "1"
 PROJECT_ID_INT = int(PROJECT_ID)
 ANNOTATOR_ID = 1

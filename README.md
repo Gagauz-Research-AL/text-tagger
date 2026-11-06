@@ -2,15 +2,15 @@
 
 ## For humans
 
-`text-tagger` is a focused human-review interface for sentence-level tagging. It gives reviewers a fast way to inspect ranked sentences, edit or add tags, and approve or reject items. It runs as a small proxy with a built-in Vue UI and persists the queue in a local JSON file.
+`text-tagger` is a focused human-review interface and a drop-in replacement for the Label Studio API surface used by the upstream ranker. It gives reviewers a fast way to inspect ranked sentences, edit or add tags, and approve or reject items. It runs as a small proxy with a built-in Vue UI and persists the queue in a local JSON file.
 
-Run it with Docker:
+Run the proxy and ranking service together:
 
 ```bash
-docker build -t text-tagger . && docker run -p 8000:8000 --name text-tagger-container text-tagger
+docker compose up --build
 ```
 
-Open <http://localhost:8000>. The upstream ranking service is expected at `http://host.docker.internal:9090`; map the host port your upstream service calls to the container port `8000`.
+Open <http://localhost:8000>. The first run builds the proxy image, pulls the ranker image, creates persistent volumes, and wires the two services together internally.
 
 For local development:
 
@@ -31,7 +31,7 @@ node static/logic.test.js
 
 ### What this repository is
 
-A dependency-light Python HTTP proxy and a static Vue 3 UI for reviewing sentence-level text-tagging tasks. It exposes a Label Studio-compatible subset needed by an upstream ranking service, stores tasks in a single JSON backlog, and sends review decisions back upstream.
+A dependency-light Python HTTP proxy and a static Vue 3 UI for reviewing sentence-level text-tagging tasks. It exposes the compatibility API subset needed by an upstream ranking service, stores tasks in a single JSON backlog, and sends review decisions back upstream.
 
 No frontend build step is required. `static/index.html` loads Vue and the shared UI logic directly.
 
@@ -45,6 +45,7 @@ No frontend build step is required. `static/index.html` loads Vue and the shared
 | `static/logic.js` | Pure edit/windowing/tag-formatting helpers |
 | `static/logic.test.js` | Node test suite for `logic.js` |
 | `tag_rules.json` | Configurable tag types removed before sending to upstream |
+| `docker-compose.yml` | Proxy + ranker services, network, ports, volumes, healthchecks |
 | `test_backlog.py` | Repository tests |
 | `test_server.py` | HTTP/API/webhook tests |
 | `test_mock_data.py` | Mock-data compatibility tests |
@@ -109,13 +110,29 @@ Rules and invariants:
 | `PAGE_SIZE` | `5` | UI rows per page |
 | `PRELOAD_PAGES` | `2` | Pages held in the client window |
 | `TAG_RULES_FILE` | `tag_rules.json` next to `server.py` | Tag filtering config |
-| `RANKER_SERVER_URL` | hardcoded `http://host.docker.internal:9090` | Upstream base URL |
+| `RANKER_SERVER_URL` | `http://host.docker.internal:9090` | Upstream base URL; Compose sets `http://ranker-server:9090` |
 
 `WINDOW_SIZE = PAGE_SIZE * PRELOAD_PAGES`.
 
 `tag_rules.json` contains `drop_on_send`, a list of case-insensitive tag type names. Matching tags are removed only from the upstream webhook payload. Proxy storage and UI retain them.
 
 The server binds to `127.0.0.1:8000` by default when run directly. The Docker image binds to `0.0.0.0:8000`.
+
+### Docker Compose
+
+`docker-compose.yml` starts both services on the `gagauz-net` bridge network:
+
+- `text-tagger` — built from this repository, exposed on host port `8000`
+- `ranker-server` — published `0.4-Alpha` image, internal port `9090`
+- Named volumes: `text_tagger_data` for the backlog, `ranker_projects` for upstream project state
+
+The ranker reaches the proxy internally at `http://text-tagger:8000`, and the proxy reaches the ranker at `http://ranker-server:9090`. Only the UI port is published to the host. The ranker image is not exposed publicly.
+
+Reset both services and their stored data with:
+
+```bash
+docker compose down -v
+```
 
 ### HTTP API
 
@@ -128,8 +145,8 @@ The server binds to `127.0.0.1:8000` by default when run directly. The Docker im
 | `GET` | `/api/job/<id>` | Full job text and explicit tags |
 | `GET` | `/api/score/<id>` | Fresh prediction score from upstream |
 | `GET` | `/api/tag-types` | Unique tag types from approved tasks |
-| `GET` | `/api/tasks?project=1` | Label Studio-compatible task list |
-| `GET` | `/api/users/<id>` | Label Studio-compatible user lookup |
+| `GET` | `/api/tasks?project=1` | Upstream-compatible task list |
+| `GET` | `/api/users/<id>` | Upstream-compatible user lookup |
 | `POST` | `/api/projects/<id>/import` | Import tasks; also accepts `/tasks` |
 | `POST` | `/api/job/<id>/tags` | Replace explicit tags for a job |
 | `POST` | `/api/result` | Approve, persist final text/tags, send webhook |
@@ -157,7 +174,7 @@ The server binds to `127.0.0.1:8000` by default when run directly. The Docker im
 
 The upstream service is expected to be reachable at `RANKER_SERVER_URL` and expose:
 
-- Label Studio-style task import into this proxy.
+- Task import into this proxy.
 - `POST /predict` for score refresh.
 - `POST /webhook` for approval/rejection updates.
 - `POST /push` for fetching additional sentences.
@@ -189,6 +206,5 @@ The proxy does not require the upstream service to understand tag metadata. Unsu
 - No authentication or authorization; intended for a trusted network.
 - Fixed project ID `1`.
 - Single JSON-file store; not designed for multiple proxy instances sharing a backlog.
-- Upstream base URL is hardcoded in `server.py`.
 - Polling is fixed at five seconds.
 - The token-refresh endpoint returns a placeholder value.

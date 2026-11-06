@@ -1,0 +1,66 @@
+services:
+  ranker-server:
+    image: mypersonaldockeracc/gagauz-volunteer-research-gagauz-ranker:0.4-Alpha
+    container_name: gagauz-ranker
+    expose:
+      - "9090"
+    volumes:
+      - ranker_projects:/workspace/ranker_projects
+    environment:
+      - LABEL_STUDIO_API_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6NDEwMjQ0NDgwMCwiaWF0IjoxNzkzOTg3NTYzLCJqdGkiOiIxZmJkNDAyZmJkZGZjZjBkYTBlMjk4NmIxMjExMWFiMCIsInVzZXJfaWQiOiIxIn0.H5vbwglb0vLtXoRWdSO2KWE3UGQr6MOHn32ulmRRR1A
+      - LABEL_STUDIO_URL=http://text-tagger:8000
+      - RANKER_PROJECTS_DIR=/workspace/ranker_projects
+      - RANKER_PORT=9090
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9090/health', timeout=2)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    restart: unless-stopped
+    networks:
+      - gagauz-net
+
+  text-tagger:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: gagauz-text-tagger:local
+    container_name: text-tagger
+    ports:
+      - "8000:8000"
+    volumes:
+      - text_tagger_data:/data
+    environment:
+      - BACKLOG_FILE=/data/backlog.json
+      - RANKER_SERVER_URL=http://ranker-server:9090
+      - PAGE_SIZE=5
+      - PRELOAD_PAGES=10
+    depends_on:
+      ranker-server:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - http://127.0.0.1:8000/api/ui-config
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - gagauz-net
+
+networks:
+  gagauz-net:
+    driver: bridge
+
+volumes:
+  ranker_projects:
+  text_tagger_data:
