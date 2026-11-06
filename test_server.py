@@ -356,6 +356,120 @@ class ServerEndpointsTest(unittest.TestCase):
         status, _ = self.request("GET", "/api/users/2/")
         self.assertEqual(status, 404)
 
+    def test_load_drop_tags_reads_config_and_lowercases(self):
+        path = Path(self.tmp.name) / "tag_rules.json"
+        path.write_text(json.dumps({"drop_on_send": ["Hyphenated", "romanism"]}), encoding="utf-8")
+
+        self.assertEqual(server.load_drop_tags(path), {"hyphenated", "romanism"})
+
+    def test_tag_types_endpoint_returns_approved_types_only(self):
+        tagged = make_task(text="Hello world", sentence_index=1)
+        tagged["data"]["tags"] = [{"left_pos": 0, "right_pos": 5, "type": "approved-type"}]
+        pending = make_task(text="Second sentence", sentence_index=2)
+        pending["data"]["tags"] = [{"left_pos": 0, "right_pos": 6, "type": "pending-type"}]
+        self.request("POST", "/api/projects/1/import", [tagged, pending])
+        server.repo.update_status(1, "approved")
+
+        status, body = self.request("GET", "/api/tag-types")
+
+        self.assertEqual(status, 200)
+        self.assertEqual(body["tag_types"], ["approved-type"])
+
+    def test_webhook_drops_configured_tag_types(self):
+        self.request("POST", "/api/projects/1/import", [make_task(text="Hello world")])
+        captured = {}
+
+        def fake_proxy(path, method="GET", data=None):
+            captured["payload"] = data
+            return 200, {"result": "ok"}
+
+        tags = [
+            {"left_pos": 0, "right_pos": 5, "type": "hyphenated"},
+            {"left_pos": 6, "right_pos": 11, "type": "spelling"},
+        ]
+        with patch.object(server, "DROP_TAGS", {"hyphenated"}):
+            with patch.object(server, "proxy_request", side_effect=fake_proxy):
+                status, _ = self.request("POST", "/api/result", {
+                    "id": 1, "text": "Hello world", "tags": tags,
+                })
+
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            [tag["type"] for tag in captured["payload"]["annotation"]["tags"]],
+            ["spelling"],
+        )
+        self.assertEqual(
+            [tag["type"] for tag in captured["payload"]["task"]["data"]["tags"]],
+            ["spelling"],
+        )
+        self.assertEqual(len(server.repo.get_job(1)["data"]["tags"]), 2)
+
+    def test_skip_sends_rejected_webhook_without_tags(self):
+        task = make_task(text="Hello world")
+        task["data"]["tags"] = [{"left_pos": 0, "right_pos": 5, "type": "spelling"}]
+        self.request("POST", "/api/projects/1/import", [task])
+        captured = {}
+
+        def fake_proxy(path, method="GET", data=None, timeout=5):
+            captured["path"] = path
+            captured["payload"] = data
+            captured["timeout"] = timeout
+            return 200, {"result": "ok"}
+
+        with patch.object(server, "proxy_request", side_effect=fake_proxy):
+            status, body = self.request("POST", "/api/skip", {"id": 1})
+
+        self.assertEqual(status, 200)
+        self.assertEqual(body["status"], "skipped")
+        self.assertEqual(captured["path"], "/webhook")
+        self.assertEqual(
+            captured["payload"]["annotation"]["result"][0]["value"]["choices"],
+            ["Rejected"],
+        )
+        self.assertNotIn("tags", captured["payload"]["annotation"])
+        self.assertNotIn("tags", captured["payload"]["task"]["data"])
+        self.assertEqual(server.repo.get_job(1)["status"], "skipped")
+
+    def test_job_tags_endpoint_persists_normalized_tags(self):
+        self.request("POST", "/api/projects/1/import", [make_task(text="Hello world")])
+
+        status, body = self.request("POST", "/api/job/1/tags", {
+            "tags": [{"left_pos": 0, "right_pos": 5, "type": "manual"}],
+        })
+
+        self.assertEqual(status, 200)
+        self.assertEqual(body["tag_count"], 1)
+        self.assertEqual(body["tags"][0]["type"], "manual")
+        self.assertEqual(body["tags"][0]["original"], "Hello")
+
+        status, job = self.request("GET", "/api/job/1")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(job["underlines"]), 1)
+        self.assertEqual(job["underlines"][0]["type"], "manual")
+
+        status, jobs = self.request("GET", "/api/jobs?offset=0&limit=1")
+        self.assertEqual(status, 200)
+        self.assertEqual(jobs["jobs"][0]["tag_count"], 1)
+
+    def test_result_webhook_includes_explicit_tags(self):
+        self.request("POST", "/api/projects/1/import", [make_task(text="Hello world")])
+        captured = {}
+
+        def fake_proxy(path, method="GET", data=None):
+            captured["payload"] = data
+            return 200, {"result": "ok"}
+
+        with patch.object(server, "proxy_request", side_effect=fake_proxy):
+            status, _ = self.request("POST", "/api/result", {
+                "id": 1,
+                "text": "Hello world",
+                "tags": [{"left_pos": 0, "right_pos": 5, "type": "manual"}],
+            })
+
+        self.assertEqual(status, 200)
+        self.assertEqual(captured["payload"]["annotation"]["tags"][0]["type"], "manual")
+        self.assertEqual(server.repo.get_job(1)["data"]["tags"][0]["type"], "manual")
+
     def test_result_webhook_echoes_original_metadata(self):
         self.request("POST", "/api/projects/1/import", [make_task(text="Original text")])
         captured = {}

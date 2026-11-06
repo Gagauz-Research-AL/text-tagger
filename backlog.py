@@ -393,3 +393,33 @@ class JsonBacklogRepository:
             task["updated_at"] = utc_now()
             self._save_unlocked()
             return True
+
+    def get_approved_tag_types(self):
+        with self.lock:
+            types = set()
+            for task in self.data["tasks"].values():
+                if task.get("status") != "approved":
+                    continue
+                for tag in task_tags(task):
+                    tag_type = tag.get("type")
+                    if tag_type:
+                        types.add(tag_type)
+            return sorted(types, key=str.lower)
+
+    def update_tags(self, job_id, tags):
+        if not isinstance(tags, list):
+            return None
+        with self.lock:
+            task = self.data["tasks"].get(str(job_id))
+            if not task:
+                return None
+            data = task.get("data")
+            if not isinstance(data, dict):
+                data = {}
+                task["data"] = data
+            normalized = task_tags({"data": {**data, "tags": tags}})
+            data["tags"] = normalized
+            task["version"] = int(task.get("version", 1)) + 1
+            task["updated_at"] = utc_now()
+            self._save_unlocked()
+            return normalized

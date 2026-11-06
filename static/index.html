@@ -734,6 +734,54 @@
     font-size: 9px;
     letter-spacing: 0.01em;
   }
+  .tag-selection {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 20px;
+    border-top: 1px solid rgba(33, 33, 33, 0.08);
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .tag-selection-label {
+    color: rgba(33, 33, 33, 0.45);
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .tag-selection-quote {
+    max-width: 28%;
+    overflow: hidden;
+    color: var(--ink);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tag-selection input,
+  .tag-selection select {
+    flex: 1 1 130px;
+    min-width: 110px;
+    padding: 3px 2px;
+    border: 0;
+    border-bottom: 1px solid var(--line-strong);
+    border-radius: 0;
+    background: transparent;
+    color: var(--ink);
+    font: 400 11px/1.4 var(--sans);
+  }
+  .tag-selection .pill { padding: 8px 13px; font-size: 9px; }
+  .tag-selection-clear {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: rgba(33, 33, 33, 0.45);
+    font: 500 8.5px/1 var(--sans);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .tag-selection-clear:hover { color: var(--ink); }
   .keys { display: flex; align-items: center; gap: 4px; white-space: nowrap; color: rgba(33, 33, 33, 0.46); }
   kbd {
     display: inline-grid;
@@ -1313,6 +1361,19 @@
                      @input="onTextInput" @click="onTagClick"
                      @keydown.enter="onEnter" @keydown="handleKeydown"></div>
               </div>
+              <div class="tag-selection" v-if="selectionRange">
+                <span class="tag-selection-label">Tag selection</span>
+                <span class="tag-selection-quote">{{ selectionRange.text }}</span>
+                <select v-model="newTagType" aria-label="Tag type">
+                  <option value="">Select tag…</option>
+                  <option v-for="type in approvedTagTypes" :key="type" :value="type">{{ type }}</option>
+                  <option value="__custom__">Custom…</option>
+                </select>
+                <input v-if="newTagType === '__custom__'" v-model="customTagType"
+                       placeholder="Custom tag type" @keydown.enter.prevent="applySelectionTag">
+                <button type="button" class="pill small pill-dark" @click="applySelectionTag">Tag</button>
+                <button type="button" class="tag-selection-clear" @click="clearSelection">Cancel</button>
+              </div>
               <div class="card-foot">
                 <span>Click a tag, then type to replace it &mdash; other edits behave as before.</span>
                 <span class="keys"><kbd>&#8984;</kbd><kbd>Z</kbd> undo <kbd>&#8984;</kbd><kbd>Y</kbd> redo</span>
@@ -1468,6 +1529,8 @@ createApp({
     windowStartPage: 0, windowStartOffset: 0, windowLoading: false,
     requestingBatch: false, polling: false, pollTimer: null, pollInterval: 5000,
     selectionHandler: null, visibilityHandler: null,
+    selectionRange: null, newTagType: "", customTagType: "",
+    approvedTagTypes: [],
     history: [], future: [],
   }),
   computed: {
@@ -1608,6 +1671,46 @@ createApp({
       }
       return pos;
     },
+    selectionOffsets() {
+      const display = this.displayEl();
+      const s = typeof window.getSelection === "function" ? window.getSelection() : null;
+      if (!s || !s.rangeCount || !this.job) return null;
+      const range = s.getRangeAt(0);
+      if (range.collapsed) return null;
+      if (!display.contains(range.startContainer) || !display.contains(range.endContainer)) return null;
+
+      const offsetOf = (container, offset) => {
+        if (container === display) {
+          let off = 0;
+          for (let i = 0; i < offset && i < display.childNodes.length; i++) {
+            off += display.childNodes[i].textContent.length;
+          }
+          return off;
+        }
+        let pos = 0;
+        const walker = document.createTreeWalker(display, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (node === container) return pos + offset;
+          pos += node.textContent.length;
+        }
+        return pos;
+      };
+
+      const left = offsetOf(range.startContainer, range.startOffset);
+      const right = offsetOf(range.endContainer, range.endOffset);
+      if (right <= left) return null;
+      return { left, right, text: this.job.text.slice(left, right) };
+    },
+    captureSelection() {
+      if (document.activeElement !== this.displayEl()) return;
+      this.selectionRange = this.selectionOffsets();
+    },
+    clearSelection() {
+      this.selectionRange = null;
+      this.newTagType = "";
+      this.customTagType = "";
+    },
     spanAtCaret(off) {
       if (off === null || !this.job) return null;
       const spans = this.job.underlines;
@@ -1631,6 +1734,7 @@ createApp({
     onSelectionChange() {
       if (document.activeElement === this.displayEl()) {
         this.syncSelectionWithCaret();
+        this.captureSelection();
       }
     },
     updateJobFromDOM() {
@@ -1641,6 +1745,8 @@ createApp({
       const oldList = this.job.underlines.slice();
       const kept = applyDiffToUnderlines(this.job.text, newText, this.job.underlines);
       this.job = { text: newText, underlines: kept };
+      this.selectionRange = null;
+      this.syncActiveTagCount();
       this.refreshTags(oldList);
       this.setCaretOffset(caret);
       this.syncSelectionWithCaret();
@@ -1677,6 +1783,8 @@ createApp({
       });
       const s = this.history.pop();
       this.job = { text: s.text, underlines: s.underlines };
+      this.selectionRange = null;
+      this.syncActiveTagCount();
       this.renderDisplay();
       this.setCaretOffset(s.caret);
       this.syncSelectionWithCaret();
@@ -1691,6 +1799,8 @@ createApp({
       });
       const s = this.future.pop();
       this.job = { text: s.text, underlines: s.underlines };
+      this.selectionRange = null;
+      this.syncActiveTagCount();
       this.renderDisplay();
       this.setCaretOffset(s.caret);
       this.syncSelectionWithCaret();
@@ -1800,8 +1910,84 @@ createApp({
         this.pushHistory(this.caretOffset());
         drop(this.job, this.sel);
         this.sel = null;
+        this.syncActiveTagCount();
+        this.persistTags();
         this.renderDisplay();
       }
+    },
+    syncActiveTagCount() {
+      const item = this.activeItem;
+      if (item && this.job) {
+        item.tag_count = this.job.underlines.length;
+        item.dirty = true;
+      }
+    },
+    async persistTags() {
+      const item = this.activeItem;
+      if (!item || !this.job) return;
+      const tags = this.job.underlines.map((u) => ({
+        left_pos: u.left_pos,
+        right_pos: u.right_pos,
+        type: u.type,
+        candidates: u.candidates.slice(),
+      }));
+      try {
+        const res = await fetch("/api/job/" + encodeURIComponent(item.id) + "/tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tags }),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        if (typeof data.tag_count === "number") item.tag_count = data.tag_count;
+      } catch (e) {
+        this.toast = "failed to save tags: " + e;
+        setTimeout(() => (this.toast = ""), 5000);
+      }
+    },
+    async applySelectionTag() {
+      if (!this.job || !this.selectionRange) return;
+      const type = String(
+        this.newTagType === "__custom__" ? this.customTagType : this.newTagType
+      ).trim();
+      if (!type) {
+        this.toast = "choose or enter a tag type";
+        setTimeout(() => (this.toast = ""), 3000);
+        return;
+      }
+
+      const text = this.job.text;
+      let left = Math.max(0, Math.min(this.selectionRange.left, text.length));
+      let right = Math.max(left, Math.min(this.selectionRange.right, text.length));
+      while (left < right && /\s/.test(text[left])) left++;
+      while (right > left && /\s/.test(text[right - 1])) right--;
+      if (right <= left) return;
+      if (this.job.underlines.some((u) => left < u.right_pos && right > u.left_pos)) {
+        this.toast = "selection overlaps an existing tag";
+        setTimeout(() => (this.toast = ""), 3000);
+        return;
+      }
+
+      this.pushHistory(left);
+      const tag = {
+        left_pos: left,
+        right_pos: right,
+        type,
+        candidates: [],
+        original: text.slice(left, right),
+      };
+      this.job.underlines.push(tag);
+      this.job.underlines.sort((a, b) => a.left_pos - b.left_pos);
+      this.sel = this.job.underlines.indexOf(tag);
+      this.cand = 0;
+      this.retypeText = "";
+      this.selectionRange = null;
+      this.newTagType = "";
+      this.customTagType = "";
+      this.syncActiveTagCount();
+      this.persistTags();
+      this.renderDisplay();
+      this.styleSelected();
     },
     startReview() {
       if (!this.job) return;
@@ -1827,6 +2013,9 @@ createApp({
       this.sel = null;
       this.cand = 0;
       this.retypeText = "";
+      this.selectionRange = null;
+      this.newTagType = "";
+      this.customTagType = "";
       this.history = [];
       this.future = [];
       this.renderDisplay();
@@ -1887,6 +2076,16 @@ createApp({
       const page = Number.isInteger(data.first_pending_page) ? data.first_pending_page : 0;
       await this.loadWindow(page, { openFirst: true });
     },
+    async loadTagTypes() {
+      try {
+        const res = await fetch("/api/tag-types", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        this.approvedTagTypes = Array.isArray(data.tag_types) ? data.tag_types : [];
+      } catch (e) {
+        console.warn("failed to load tag types", e);
+      }
+    },
     async refreshScore(item) {
       try {
         const res = await fetch("/api/score/" + encodeURIComponent(item.id), { cache: "no-store" });
@@ -1902,6 +2101,9 @@ createApp({
     },
     async loadItem(item) {
       this.saveActive();
+      this.selectionRange = null;
+      this.newTagType = "";
+      this.customTagType = "";
 
       const previous = this.activeItem;
       if (previous && previous.status === "reviewing") {
@@ -2023,6 +2225,7 @@ createApp({
         if (!res.ok) throw new Error("HTTP " + res.status);
         item.status = "queued";
         item.dirty = false;
+        this.loadTagTypes();
         this.loadItem(item);
         this.toast = "unapproved · " + item.id;
         setTimeout(() => (this.toast = ""), 3000);
@@ -2145,15 +2348,23 @@ createApp({
       if (!this.canApprove) return;
       const item = this.activeItem;
       const finalText = approve(this.job);
+      const tags = this.job.underlines.map((u) => ({
+        left_pos: u.left_pos,
+        right_pos: u.right_pos,
+        type: u.type,
+        candidates: u.candidates.slice(),
+      }));
+      item.tag_count = tags.length;
       this.saveActive();
       try {
         const res = await fetch("/api/result", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: item.id, text: finalText }),
+          body: JSON.stringify({ id: item.id, text: finalText, tags }),
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
         item.status = "approved";
         item.dirty = false;
+        this.loadTagTypes();
         this.toast = "approved · " + item.id;
         setTimeout(() => (this.toast = ""), 3000);
         this.advance();
@@ -2188,6 +2399,7 @@ createApp({
         if (Number.isInteger(config.window_size) && config.window_size > 0) {
           this.windowSize = config.window_size;
         }
+        await this.loadTagTypes();
         await this.loadInitial();
       } catch (e) {
         console.error("failed to load pagination config", e);

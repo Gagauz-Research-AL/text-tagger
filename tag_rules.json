@@ -1,0 +1,15 @@
+{
+  "drop_on_send": [
+    "hyphenated",
+    "hyphenated-candidate",
+    "candidate",
+    "unknown",
+    "romanism",
+    "known-auto-match_exact_case",
+    "known-auto-match_lower_case",
+    "known-word-bank_exact_case",
+    "known-word-bank_lower_case",
+    "left",
+    "right"
+  ]
+}

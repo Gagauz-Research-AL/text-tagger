@@ -26,6 +26,43 @@ PROJECT_ID = "1"
 PROJECT_ID_INT = int(PROJECT_ID)
 ANNOTATOR_ID = 1
 BACKLOG_FILE = Path(os.environ.get("BACKLOG_FILE", "/app/backlog.json"))
+TAG_RULES_FILE = Path(os.environ.get(
+    "TAG_RULES_FILE",
+    str(Path(__file__).parent / "tag_rules.json"),
+))
+
+DEFAULT_DROP_TAGS = {
+    "hyphenated",
+    "hyphenated-candidate",
+    "candidate",
+    "unknown",
+    "romanism",
+    "known-auto-match_exact_case",
+    "known-auto-match_lower_case",
+    "known-word-bank_exact_case",
+    "known-word-bank_lower_case",
+    "left",
+    "right",
+}
+
+
+def load_drop_tags(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            rules = json.load(f)
+        values = rules.get("drop_on_send") if isinstance(rules, dict) else None
+        if not isinstance(values, list):
+            raise ValueError("drop_on_send must be a list")
+        return {str(value).strip().lower() for value in values if str(value).strip()}
+    except FileNotFoundError:
+        logger.warning("Tag rules file not found: %s; using defaults", path)
+    except Exception as e:
+        logger.warning("Invalid tag rules file %s: %s; using defaults", path, e)
+    return {value.lower() for value in DEFAULT_DROP_TAGS}
+
+
+DROP_TAGS = load_drop_tags(TAG_RULES_FILE)
+logger.info("Tag drop rules: %s", ", ".join(sorted(DROP_TAGS)))
 
 
 def _positive_int_env(name, default):
@@ -75,11 +112,24 @@ def proxy_request(path, method="GET", data=None, timeout=5):
         return 500, {"error": str(e)}
 
 
+def tags_for_ranker(job):
+    return [
+        tag for tag in task_tags(job)
+        if str(tag.get("type", "")).strip().lower() not in DROP_TAGS
+    ]
+
+
 def build_webhook_payload(job, final_text):
     try:
         task_id = int(job["id"])
     except (TypeError, ValueError):
         task_id = job["id"]
+
+    tags = tags_for_ranker(job)
+    data = dict(job.get("data") or {})
+    data["tags"] = tags
+    if "underlines" in data:
+        data["underlines"] = tags
 
     now = utc_now()
     return {
@@ -87,7 +137,47 @@ def build_webhook_payload(job, final_text):
         "action": "ANNOTATION_CREATED",
         "task": {
             "id": task_id,
-            "data": job.get("data") or {},
+            "data": data,
+            "project": PROJECT_ID_INT,
+            "created_at": job.get("created_at"),
+            "updated_at": job.get("updated_at"),
+        },
+        "annotation": {
+            "id": task_id,
+            "task": task_id,
+            "project": PROJECT_ID_INT,
+            "completed_by": ANNOTATOR_ID,
+            "tags": tags,
+            "result": [{
+                "from_name": "curated",
+                "to_name": "original",
+                "type": "textarea",
+                "value": {"text": [final_text]},
+            }],
+            "was_cancelled": False,
+            "ground_truth": False,
+            "created_at": now,
+            "updated_at": now,
+        },
+    }
+
+
+def build_rejection_payload(job):
+    try:
+        task_id = int(job["id"])
+    except (TypeError, ValueError):
+        task_id = job["id"]
+
+    data = dict(job.get("data") or {})
+    data.pop("tags", None)
+    data.pop("underlines", None)
+    now = utc_now()
+    return {
+        "project": {"id": PROJECT_ID_INT, "title": "text-tagger"},
+        "action": "ANNOTATION_CREATED",
+        "task": {
+            "id": task_id,
+            "data": data,
             "project": PROJECT_ID_INT,
             "created_at": job.get("created_at"),
             "updated_at": job.get("updated_at"),
@@ -98,10 +188,10 @@ def build_webhook_payload(job, final_text):
             "project": PROJECT_ID_INT,
             "completed_by": ANNOTATOR_ID,
             "result": [{
-                "from_name": "curated",
+                "from_name": "status",
                 "to_name": "original",
-                "type": "textarea",
-                "value": {"text": [final_text]},
+                "type": "choices",
+                "value": {"choices": ["Rejected"]},
             }],
             "was_cancelled": False,
             "ground_truth": False,
@@ -152,6 +242,8 @@ class Handler(BaseHTTPRequestHandler):
                 "preload_pages": PRELOAD_PAGES,
                 "window_size": WINDOW_SIZE,
             })
+        elif path == "/api/tag-types":
+            self._json(200, {"tag_types": repo.get_approved_tag_types()})
         elif path == "/api/jobs":
             params = self._query()
             if "offset" in params or "limit" in params:
@@ -348,6 +440,22 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(201, body)
                 return
 
+            if len(parts) == 4 and parts[0] == "api" and parts[1] == "job" and parts[3] == "tags":
+                tags = raw.get("tags") if isinstance(raw, dict) else None
+                if not isinstance(tags, list):
+                    self._json(400, {"error": "tags must be a list"})
+                    return
+                normalized = repo.update_tags(parts[2], tags)
+                if normalized is None:
+                    self._json(404, {"error": "job not found"})
+                    return
+                self._json(200, {
+                    "id": int(parts[2]) if parts[2].isdigit() else parts[2],
+                    "tags": normalized,
+                    "tag_count": len(normalized),
+                })
+                return
+
             if path == "/api/result":
                 job_id = raw.get("id")
                 final_text = raw.get("text")
@@ -359,6 +467,11 @@ class Handler(BaseHTTPRequestHandler):
                 if not job:
                     self._json(404, {"error": "job not found"})
                     return
+
+                tags = raw.get("tags")
+                if isinstance(tags, list):
+                    repo.update_tags(job_id, tags)
+                    job = repo.get_job(job_id)
 
                 code, resp = proxy_request("/webhook", "POST", build_webhook_payload(job, final_text))
                 if 200 <= code < 300:
@@ -379,6 +492,17 @@ class Handler(BaseHTTPRequestHandler):
                 if not repo.update_status(job_id, status):
                     self._json(404, {"error": "job not found"})
                     return
+                if path == "/api/skip":
+                    job = repo.get_job(job_id)
+                    if job:
+                        code, response = proxy_request(
+                            "/webhook", "POST", build_rejection_payload(job), timeout=2,
+                        )
+                        if not (200 <= code < 300):
+                            logger.warning(
+                                "Ranker rejection webhook failed for job %s: %s %s",
+                                job_id, code, response,
+                            )
                 self._json(200, {"status": "queued" if status == "queued" else "skipped", "id": job_id})
                 return
 
