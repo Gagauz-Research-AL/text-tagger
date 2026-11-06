@@ -6,5 +6,5 @@ WORKDIR /app
 COPY tagger.py mock_data.py server.py backlog.py tag_rules.json ./
 COPY static/ static/
 
-EXPOSE 8080
-CMD ["python3", "server.py", "--host", "0.0.0.0", "--port", "8080"]
+EXPOSE 8000
+CMD ["python3", "server.py", "--host", "0.0.0.0", "--port", "8000"]
